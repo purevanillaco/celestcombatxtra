@@ -21,7 +21,6 @@ import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager;
 import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager.CooldownKey;
 import com.shyamstudio.celestcombatXtra.cooldown.UseCooldowns;
 
-import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
 import java.util.Map;
@@ -97,7 +96,7 @@ public final class SpearControlListener implements Listener {
       String bar = plugin.getLanguageManager().getActionBar("spear_lunge_cooldown",
           Map.of("time", String.valueOf(remaining)));
       if (bar != null) {
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(bar));
+        plugin.sendActionBar(player, TextComponent.fromLegacyText(bar));
       }
       return;
     }
@@ -117,6 +116,7 @@ public final class SpearControlListener implements Listener {
 
   private void startSpearCooldownActionBar(Player player) {
     if (player == null) return;
+    if (plugin.isActionBarDisabled()) return;
     UUID uuid = player.getUniqueId();
     Scheduler.Task existing = spearCountdownTasks.get(uuid);
     if (existing != null) existing.cancel();
@@ -137,7 +137,7 @@ public final class SpearControlListener implements Listener {
       String bar = plugin.getLanguageManager().getActionBar("spear_lunge_cooldown",
           Map.of("time", String.valueOf(remaining)));
       if (bar != null) {
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(bar));
+        plugin.sendActionBar(player, TextComponent.fromLegacyText(bar));
       }
     }, 0L, COOLDOWN_ACTION_BAR_INTERVAL);
     spearCountdownTasks.put(uuid, task);
@@ -208,7 +208,7 @@ public final class SpearControlListener implements Listener {
     if (player == null) return;
     String bar = plugin.getLanguageManager().getActionBar("spear_disabled", Map.of());
     if (bar != null) {
-      player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(bar));
+      plugin.sendActionBar(player, TextComponent.fromLegacyText(bar));
     } else {
       plugin.getMessageService().sendMessage(player, "spear_disabled", Map.of());
     }

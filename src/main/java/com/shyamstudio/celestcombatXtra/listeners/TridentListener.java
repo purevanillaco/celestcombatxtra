@@ -6,7 +6,6 @@ import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Trident;
-import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -339,13 +338,14 @@ public class TridentListener implements Listener {
             plugin.getMessageService().sendMessage(player, baseActionBarKey, basePlaceholders);
             return;
         }
+        if (plugin.isActionBarDisabled()) return;
 
         StringBuilder merged = new StringBuilder(baseActionBar);
         if (itemCooldownManager != null) {
             itemCooldownManager.appendMergedCooldownSuffix(merged, player, true);
         }
 
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
+        plugin.sendActionBar(player,
                 TextComponent.fromLegacyText(ColorUtil.translateHexColorCodes(merged.toString())));
     }
 

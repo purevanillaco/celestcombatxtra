@@ -1,6 +1,5 @@
 package com.shyamstudio.celestcombatXtra.cooldown;
 
-import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -123,9 +122,10 @@ public final class ItemCooldownManager {
    */
   private void sendActionBarOnly(Player player, String messageKey, Map<String, String> placeholders) {
     if (player == null || !player.isOnline()) return;
+    if (plugin.isActionBarDisabled()) return;
     String line = plugin.getLanguageManager().getActionBar(messageKey, placeholders);
     if (line == null) return;
-    player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
+    plugin.sendActionBar(player,
         TextComponent.fromLegacyText(ColorUtil.translateHexColorCodes(line)));
   }
 

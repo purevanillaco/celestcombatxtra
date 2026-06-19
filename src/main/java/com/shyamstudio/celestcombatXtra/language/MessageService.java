@@ -1,5 +1,6 @@
 package com.shyamstudio.celestcombatXtra.language;
 
+import com.shyamstudio.celestcombatXtra.CelestCombatPro;
 import lombok.RequiredArgsConstructor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -156,12 +157,15 @@ public class MessageService {
         }
 
         // Action bar
-        String actionBar = languageManager.getActionBar(key, placeholders);
-        if (actionBar != null) {
-            player.spigot().sendMessage(
-                    ChatMessageType.ACTION_BAR,
-                    TextComponent.fromLegacyText(ColorUtil.translateHexColorCodes(actionBar))
-            );
+        boolean skipActionBar = plugin instanceof CelestCombatPro ccp && ccp.isActionBarDisabled();
+        if (!skipActionBar) {
+            String actionBar = languageManager.getActionBar(key, placeholders);
+            if (actionBar != null) {
+                player.spigot().sendMessage(
+                        ChatMessageType.ACTION_BAR,
+                        TextComponent.fromLegacyText(ColorUtil.translateHexColorCodes(actionBar))
+                );
+            }
         }
 
         // Sound

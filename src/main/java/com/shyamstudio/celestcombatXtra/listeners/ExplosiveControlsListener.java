@@ -23,7 +23,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 
 import com.shyamstudio.celestcombatXtra.CelestCombatPro;
 
-import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
 import java.util.Map;
@@ -311,7 +310,7 @@ public final class ExplosiveControlsListener implements Listener {
     if (player == null) return;
     String bar = plugin.getLanguageManager().getActionBar(key, Map.of());
     if (bar != null) {
-      player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(bar));
+      plugin.sendActionBar(player, TextComponent.fromLegacyText(bar));
     } else {
       plugin.getMessageService().sendMessage(player, key);
     }

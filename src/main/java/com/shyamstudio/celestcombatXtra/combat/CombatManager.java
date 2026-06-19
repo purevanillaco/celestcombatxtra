@@ -1,7 +1,6 @@
 package com.shyamstudio.celestcombatXtra.combat;
 
 import lombok.Getter;
-import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -413,6 +412,7 @@ public class CombatManager {
     private void sendPhase1MergedActionBar(Player player, String baseActionBarKey, Map<String, String> basePlaceholders,
             boolean appendWindCharge) {
         if (player == null || !player.isOnline()) return;
+        if (plugin.isActionBarDisabled()) return;
 
         String baseActionBar = plugin.getLanguageManager().getActionBar(baseActionBarKey, basePlaceholders);
         if (baseActionBar == null) return;
@@ -423,7 +423,7 @@ public class CombatManager {
             itemCooldownManager.appendMergedCooldownSuffix(merged, player, appendWindCharge);
         }
 
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
+        plugin.sendActionBar(player,
                 TextComponent.fromLegacyText(ColorUtil.translateHexColorCodes(merged.toString())));
     }
 

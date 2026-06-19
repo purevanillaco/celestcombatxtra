@@ -27,7 +27,6 @@ import com.shyamstudio.celestcombatXtra.language.MessageService;
 
 import io.papermc.paper.event.player.PlayerArmSwingEvent;
 
-import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
 import java.util.ArrayList;
@@ -265,7 +264,7 @@ public final class GeneralItemCooldownListener implements Listener {
     String line = plugin.getLanguageManager().getActionBar(
         "mace_cooldown", Map.of("time", String.valueOf(remainingSeconds)));
     if (line == null) return;
-    player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
+    plugin.sendActionBar(player,
         TextComponent.fromLegacyText(ColorUtil.translateHexColorCodes(line)));
   }
 

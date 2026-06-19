@@ -17,7 +17,6 @@ import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager;
 import com.shyamstudio.celestcombatXtra.cooldown.UseCooldowns;
 import com.shyamstudio.celestcombatXtra.language.ColorUtil;
 
-import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
 import java.util.Map;
@@ -148,7 +147,7 @@ public final class WindChargeListener implements Listener {
     String line = plugin.getLanguageManager().getActionBar(
         "windcharge_cooldown", Map.of("time", String.valueOf(remainingSeconds)));
     if (line != null) {
-      player.spigot().sendMessage(ChatMessageType.ACTION_BAR,
+      plugin.sendActionBar(player,
           TextComponent.fromLegacyText(ColorUtil.translateHexColorCodes(line)));
     }
   }

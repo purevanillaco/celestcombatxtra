@@ -15,7 +15,6 @@ import com.shyamstudio.celestcombatXtra.combat.CombatManager;
 import com.shyamstudio.celestcombatXtra.configs.RestrictionConfigPaths;
 import com.shyamstudio.celestcombatXtra.cooldown.UseCooldowns;
 
-import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 
 import java.util.HashMap;
@@ -127,7 +126,7 @@ public class ItemRestrictionListener implements Listener {
         if (player == null || key == null) return;
         String actionBar = plugin.getLanguageManager().getActionBar(key, placeholders);
         if (actionBar != null) {
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(actionBar));
+            plugin.sendActionBar(player, TextComponent.fromLegacyText(actionBar));
         } else {
             plugin.getMessageService().sendMessage(player, key, placeholders);
         }

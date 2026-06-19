@@ -18,6 +18,9 @@ language: en_US
 # Enable or disable debug mode (provides verbose console output)
 debug: false
 
+# When true, the plugin never sends action bar messages (combat, cooldowns, restrictions, etc.).
+disable_actionbar: false
+
 #---------------------------------------------------
 #              CORE COMBAT SETTINGS
 #---------------------------------------------------
