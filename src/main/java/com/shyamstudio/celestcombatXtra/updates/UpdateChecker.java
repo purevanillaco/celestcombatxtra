@@ -1,10 +1,5 @@
 package com.shyamstudio.celestcombatXtra.updates;
 
-/**
- * Update checker that fetches the latest version from Modrinth.
- * <p>
- * Uses project slug from {@code modrinth.com/plugin/celestcombat-xtra}.
- */
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -33,26 +28,26 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/**
+ * Update checker that fetches the latest version from Modrinth and GitHub.
+ */
 public class UpdateChecker implements Listener {
+    private static final String USER_AGENT = "CelestCombat-UpdateChecker/1.0";
+    private static final String MODRINTH_SLUG = "celestcombat-xtra";
+    private static final String GITHUB_REPO = "vanillaxtra/celestcombatxtra";
+
     private final JavaPlugin plugin;
-    /** Modrinth project slug: modrinth.com/plugin/celestcombat-xtra */
-    private final String projectId = "celestcombat-xtra";
     private boolean updateAvailable = false;
     private final String currentVersion;
     private String latestVersion = "";
-    private String downloadUrl = "";
-    private String directLink = "";
+    private String modrinthUrl = "";
+    private String githubUrl = "";
 
-    // Console colors
     private static final String CONSOLE_RESET = "\u001B[0m";
     private static final String CONSOLE_BRIGHT_GREEN = "\u001B[92m";
     private static final String CONSOLE_YELLOW = "\u001B[33m";
     private static final String CONSOLE_BRIGHT_BLUE = "\u001B[94m";
-    private static final String CONSOLE_LAVENDER = "\u001B[38;5;183m";
-    private static final String CONSOLE_PINK = "\u001B[38;5;206m";
-    private static final String CONSOLE_DEEP_PINK = "\u001B[38;5;198m";
 
-    // Track players who have received an update notification today
     private final Map<UUID, LocalDate> notifiedPlayers = new HashMap<>();
 
     public UpdateChecker(JavaPlugin plugin) {
@@ -60,7 +55,6 @@ public class UpdateChecker implements Listener {
         this.currentVersion = plugin.getDescription().getVersion();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
-        // Check for updates asynchronously on plugin startup
         checkForUpdates().thenAccept(hasUpdate -> {
             if (hasUpdate) {
                 displayConsoleUpdateMessage();
@@ -71,37 +65,38 @@ public class UpdateChecker implements Listener {
         });
     }
 
-    /**
-     * Displays a fancy update message in the console
-     */
     private void displayConsoleUpdateMessage() {
-        String modrinthLink = "https://modrinth.com/plugin/" + projectId + "/version/" + latestVersion;
         String frameColor = CONSOLE_BRIGHT_BLUE;
 
         plugin.getLogger().info(frameColor +
                 "────────────────────────────────────────────────────" + CONSOLE_RESET);
         plugin.getLogger().info(frameColor + CONSOLE_BRIGHT_GREEN +
-                "         🌟 Celest Combat Update Available 🌟" + CONSOLE_RESET);
+                "         Celest Combat Update Available" + CONSOLE_RESET);
         plugin.getLogger().info(frameColor +
                 "────────────────────────────────────────────────────" + CONSOLE_RESET);
         plugin.getLogger().info("");
         plugin.getLogger().info(frameColor +
-                CONSOLE_RESET + "📦 Current version: " + CONSOLE_YELLOW  + formatConsoleText(currentVersion, 31) + CONSOLE_RESET);
+                CONSOLE_RESET + "Current version: " + CONSOLE_YELLOW + formatConsoleText(currentVersion, 31) + CONSOLE_RESET);
         plugin.getLogger().info(frameColor +
-                CONSOLE_RESET + "✅ Latest version: " + CONSOLE_BRIGHT_GREEN + formatConsoleText(latestVersion, 32) + CONSOLE_RESET);
+                CONSOLE_RESET + "Latest version: " + CONSOLE_BRIGHT_GREEN + formatConsoleText(latestVersion, 32) + CONSOLE_RESET);
         plugin.getLogger().info("");
-        plugin.getLogger().info(frameColor +
-                CONSOLE_RESET + "📥 Download the latest version at:" + CONSOLE_RESET);
-        plugin.getLogger().info(frameColor + " " +
-                CONSOLE_BRIGHT_GREEN + formatConsoleText(modrinthLink, 51) + CONSOLE_RESET);
+        if (!modrinthUrl.isEmpty()) {
+            plugin.getLogger().info(frameColor +
+                    CONSOLE_RESET + "Modrinth:" + CONSOLE_RESET);
+            plugin.getLogger().info(frameColor + " " +
+                    CONSOLE_BRIGHT_GREEN + formatConsoleText(modrinthUrl, 51) + CONSOLE_RESET);
+        }
+        if (!githubUrl.isEmpty()) {
+            plugin.getLogger().info(frameColor +
+                    CONSOLE_RESET + "GitHub:" + CONSOLE_RESET);
+            plugin.getLogger().info(frameColor + " " +
+                    CONSOLE_BRIGHT_GREEN + formatConsoleText(githubUrl, 51) + CONSOLE_RESET);
+        }
         plugin.getLogger().info("");
         plugin.getLogger().info(frameColor +
                 "────────────────────────────────────────────────────" + CONSOLE_RESET);
     }
 
-    /**
-     * Format text to fit within console box with padding
-     */
     private String formatConsoleText(String text, int maxLength) {
         if (text.length() > maxLength) {
             return text.substring(0, maxLength - 3) + "...";
@@ -109,172 +104,238 @@ public class UpdateChecker implements Listener {
         return text + " ".repeat(maxLength - text.length());
     }
 
-    /**
-     * Checks for updates from Modrinth
-     * @return CompletableFuture that resolves to true if an update is available
-     */
     public CompletableFuture<Boolean> checkForUpdates() {
-        return CompletableFuture.supplyAsync(() -> {
+        modrinthResult = null;
+        githubResult = null;
+
+        return CompletableFuture.allOf(
+                fetchModrinthVersion(),
+                fetchGitHubVersion()
+        ).thenApply(ignored -> {
+            Version current = new Version(currentVersion);
+            Version latest = Version.ZERO;
+            String bestVersionLabel = "";
+
+            RemoteVersion modrinth = modrinthResult;
+            RemoteVersion github = githubResult;
+
+            if (modrinth != null && modrinth.version.compareTo(latest) > 0) {
+                latest = modrinth.version;
+                bestVersionLabel = modrinth.versionLabel;
+            }
+            if (github != null && github.version.compareTo(latest) > 0) {
+                latest = github.version;
+                bestVersionLabel = github.versionLabel;
+            }
+
+            if (modrinth != null) {
+                modrinthUrl = modrinth.pageUrl;
+            }
+            if (github != null) {
+                githubUrl = github.pageUrl;
+            }
+
+            if (latest.compareTo(current) > 0) {
+                latestVersion = bestVersionLabel.isEmpty() ? latest.toString() : bestVersionLabel;
+                updateAvailable = true;
+                return true;
+            }
+
+            updateAvailable = false;
+            return false;
+        });
+    }
+
+    private volatile RemoteVersion modrinthResult;
+    private volatile RemoteVersion githubResult;
+
+    private record RemoteVersion(Version version, String versionLabel, String pageUrl) {}
+
+    private CompletableFuture<Void> fetchModrinthVersion() {
+        return CompletableFuture.runAsync(() -> {
             try {
-                // String currentVersion = "0.0.0";
-                URL url = new URL("https://api.modrinth.com/v2/project/" + projectId + "/version");
+                String slug = MODRINTH_SLUG;
+                URL url = new URL("https://api.modrinth.com/v2/project/" + slug + "/version");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
-                connection.setRequestProperty("User-Agent", "CelestCombat-UpdateChecker/1.0");
+                connection.setRequestProperty("User-Agent", USER_AGENT);
                 connection.setRequestProperty("Accept", "application/json");
 
                 if (connection.getResponseCode() != 200) {
-                    plugin.getLogger().warning("Failed to check for updates. HTTP Error: " + connection.getResponseCode());
-                    return false;
+                    plugin.getLogger().warning("Modrinth update check failed. HTTP " + connection.getResponseCode());
+                    return;
                 }
 
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                String response = reader.lines().collect(Collectors.joining("\n"));
-                reader.close();
-
+                String response = readResponse(connection);
                 JsonArray versions = JsonParser.parseString(response).getAsJsonArray();
                 if (versions.isEmpty()) {
-                    return false;
+                    return;
                 }
 
-                // Find the latest version
-                JsonObject latestVersionObj = null;
-                for (JsonElement element : versions) {
-                    JsonObject version = element.getAsJsonObject();
-                    // Skip pre-releases by checking if version_type is "release"
-                    String versionType = version.get("version_type").getAsString();
-                    if (versionType.equals("release")) {
-                        if (latestVersionObj == null) {
-                            latestVersionObj = version;
-                        } else {
-                            // Compare date_published to find the newest
-                            String currentDate = latestVersionObj.get("date_published").getAsString();
-                            String newDate = version.get("date_published").getAsString();
-                            if (newDate.compareTo(currentDate) > 0) {
-                                latestVersionObj = version;
-                            }
-                        }
-                    }
+                JsonObject latestRelease = pickNewestByDate(versions, true);
+                JsonObject latestAny = pickNewestByDate(versions, false);
+                JsonObject chosen = latestRelease != null ? latestRelease : latestAny;
+                if (chosen == null) {
+                    return;
                 }
 
-                if (latestVersionObj == null) {
-                    return false;
-                }
+                String versionNumber = chosen.get("version_number").getAsString();
+                String versionId = chosen.get("id").getAsString();
+                String pageUrl = "https://modrinth.com/plugin/" + slug + "/version/" + versionId;
 
-                latestVersion = latestVersionObj.get("version_number").getAsString();
-                String versionId = latestVersionObj.get("id").getAsString();
-
-                // Create proper Modrinth page link (instead of direct download)
-                downloadUrl = "https://modrinth.com/plugin/" + projectId + "/version/" + latestVersion;
-
-                // Also save direct link (but don't display it)
-                JsonArray files = latestVersionObj.getAsJsonArray("files");
-                if (!files.isEmpty()) {
-                    JsonObject primaryFile = files.get(0).getAsJsonObject();
-                    directLink = primaryFile.get("url").getAsString();
-                }
-
-                // Compare versions using the Version class
-                Version latest = new Version(latestVersion);
-                Version current = new Version(currentVersion);
-
-                // If latest version is greater than current version, an update is available
-                updateAvailable = latest.compareTo(current) > 0;
-                return updateAvailable;
-
+                modrinthResult = new RemoteVersion(new Version(versionNumber), versionNumber, pageUrl);
             } catch (Exception e) {
-                plugin.getLogger().warning("Error checking for updates: " + e.getMessage());
-                e.printStackTrace();
-                return false;
+                plugin.getLogger().warning("Modrinth update check error: " + e.getMessage());
             }
         });
     }
 
-    /**
-     * Sends a beautiful update notification to a player
-     *
-     * @param player The player to notify
-     */
+    private CompletableFuture<Void> fetchGitHubVersion() {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                String repo = GITHUB_REPO;
+                URL url = new URL("https://api.github.com/repos/" + repo + "/releases/latest");
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("User-Agent", USER_AGENT);
+                connection.setRequestProperty("Accept", "application/vnd.github+json");
+
+                if (connection.getResponseCode() != 200) {
+                    plugin.getLogger().warning("GitHub update check failed. HTTP " + connection.getResponseCode());
+                    return;
+                }
+
+                String response = readResponse(connection);
+                JsonObject release = JsonParser.parseString(response).getAsJsonObject();
+                if (!release.has("tag_name")) {
+                    return;
+                }
+
+                String tagName = release.get("tag_name").getAsString();
+                String versionLabel = tagName.replaceAll("^v", "");
+                String pageUrl = release.has("html_url")
+                        ? release.get("html_url").getAsString()
+                        : "https://github.com/" + repo + "/releases/latest";
+
+                githubResult = new RemoteVersion(new Version(versionLabel), versionLabel, pageUrl);
+            } catch (Exception e) {
+                plugin.getLogger().warning("GitHub update check error: " + e.getMessage());
+            }
+        });
+    }
+
+    private JsonObject pickNewestByDate(JsonArray versions, boolean releaseOnly) {
+        JsonObject newest = null;
+        for (JsonElement element : versions) {
+            JsonObject version = element.getAsJsonObject();
+            if (releaseOnly) {
+                String versionType = version.get("version_type").getAsString();
+                if (!"release".equals(versionType)) {
+                    continue;
+                }
+            }
+            if (newest == null) {
+                newest = version;
+                continue;
+            }
+            String currentDate = newest.get("date_published").getAsString();
+            String newDate = version.get("date_published").getAsString();
+            if (newDate.compareTo(currentDate) > 0) {
+                newest = version;
+            }
+        }
+        return newest;
+    }
+
+    private String readResponse(HttpURLConnection connection) throws Exception {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+            return reader.lines().collect(Collectors.joining("\n"));
+        }
+    }
+
     private void sendUpdateNotification(Player player) {
         if (!updateAvailable || !player.hasPermission("celestcombatxtra.update.notify")) {
             return;
         }
 
-        TextColor primaryBlue = TextColor.fromHexString("#3B82F6"); // Brighter blue
-        TextColor green = TextColor.fromHexString("#22C55E"); // Vibrant green
-        TextColor redPink = TextColor.fromHexString("#EF4444"); // Bold red
-        TextColor orange = TextColor.fromHexString("#F97316"); // Rich orange
-        TextColor white = TextColor.fromHexString("#F3F4F6"); // Softer white
+        TextColor primaryBlue = TextColor.fromHexString("#3B82F6");
+        TextColor green = TextColor.fromHexString("#22C55E");
+        TextColor redPink = TextColor.fromHexString("#EF4444");
+        TextColor orange = TextColor.fromHexString("#F97316");
+        TextColor white = TextColor.fromHexString("#F3F4F6");
 
-        Component borderTop = Component.text("───── CelestCombat Update ─────").color(primaryBlue);
-        Component borderBottom = Component.text("───────────────────────").color(primaryBlue);
-
-        Component updateMsg = Component.text("➤ New update available!").color(green);
-
-        Component versionsComponent = Component.text("✦ Current: ")
+        Component borderTop = Component.text("----- CelestCombat Update -----").color(primaryBlue);
+        Component borderBottom = Component.text("-----------------------").color(primaryBlue);
+        Component updateMsg = Component.text("New update available!").color(green);
+        Component versionsComponent = Component.text("Current: ")
                 .color(white)
                 .append(Component.text(currentVersion).color(redPink))
-                .append(Component.text("  ✦ Latest: ").color(white))
+                .append(Component.text("  Latest: ").color(white))
                 .append(Component.text(latestVersion).color(green));
-
-        Component downloadButton = Component.text("▶ [Click to download latest version]")
-                .color(orange)
-                .clickEvent(ClickEvent.openUrl(downloadUrl))
-                .hoverEvent(HoverEvent.showText(
-                        Component.text("Download version ")
-                                .color(white)
-                                .append(Component.text(latestVersion).color(green))
-                ));
 
         player.sendMessage(" ");
         player.sendMessage(borderTop);
         player.sendMessage(" ");
         player.sendMessage(updateMsg);
         player.sendMessage(versionsComponent);
-        player.sendMessage(downloadButton);
+
+        if (!modrinthUrl.isEmpty()) {
+            Component modrinthButton = Component.text("[Download on Modrinth]")
+                    .color(orange)
+                    .clickEvent(ClickEvent.openUrl(modrinthUrl))
+                    .hoverEvent(HoverEvent.showText(
+                            Component.text("Open Modrinth release ").color(white)
+                                    .append(Component.text(latestVersion).color(green))
+                    ));
+            player.sendMessage(modrinthButton);
+        }
+
+        if (!githubUrl.isEmpty()) {
+            Component githubButton = Component.text("[View on GitHub]")
+                    .color(orange)
+                    .clickEvent(ClickEvent.openUrl(githubUrl))
+                    .hoverEvent(HoverEvent.showText(
+                            Component.text("Open GitHub release ").color(white)
+                                    .append(Component.text(latestVersion).color(green))
+                    ));
+            player.sendMessage(githubButton);
+        }
+
         player.sendMessage(" ");
         player.sendMessage(borderBottom);
-
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.2f);
     }
-
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        if (!player.hasPermission("celestcombatxtra.update.notify")) {
+            return;
+        }
 
-        // Check if player has permission and if there's an update
-        if (player.hasPermission("celestcombatxtra.update.notify")) {
+        UUID playerId = player.getUniqueId();
+        LocalDate today = LocalDate.now();
 
-            UUID playerId = player.getUniqueId();
-            LocalDate today = LocalDate.now();
+        notifiedPlayers.entrySet().removeIf(entry -> entry.getValue().isBefore(today));
 
-            // Clean up old notifications
-            notifiedPlayers.entrySet().removeIf(entry -> entry.getValue().isBefore(today));
+        if (notifiedPlayers.containsKey(playerId) && notifiedPlayers.get(playerId).isEqual(today)) {
+            return;
+        }
 
-            // Check if the player has already been notified today
-            if (notifiedPlayers.containsKey(playerId) && notifiedPlayers.get(playerId).isEqual(today)) {
-                return; // Already notified today
-            }
-
-            if (updateAvailable) {
-                // Wait a bit before sending the notification
-                Scheduler.runTaskLater(() -> {
-                    sendUpdateNotification(player);
-                    notifiedPlayers.put(playerId, today); // Mark as notified after sending
-                }, 40L);
-            } else {
-                // Re-check for updates when an operator joins, but only if we haven't found an update yet
-                checkForUpdates().thenAccept(hasUpdate -> {
-                    if (hasUpdate) {
-                        Scheduler.runTask(() -> {
-                            sendUpdateNotification(player);
-                            notifiedPlayers.put(playerId, today); // Mark as notified after sending
-                        });
-                    }
-                });
-                // Do NOT mark as notified here if no update is found yet
-            }
+        if (updateAvailable) {
+            Scheduler.runTaskLater(() -> {
+                sendUpdateNotification(player);
+                notifiedPlayers.put(playerId, today);
+            }, 40L);
+        } else {
+            checkForUpdates().thenAccept(hasUpdate -> {
+                if (hasUpdate) {
+                    Scheduler.runTask(() -> {
+                        sendUpdateNotification(player);
+                        notifiedPlayers.put(playerId, today);
+                    });
+                }
+            });
         }
     }
 }

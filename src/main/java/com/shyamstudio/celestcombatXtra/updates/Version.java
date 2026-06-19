@@ -3,6 +3,8 @@ package com.shyamstudio.celestcombatXtra.updates;
 import org.jetbrains.annotations.NotNull;
 
 public class Version implements Comparable<Version> {
+    public static final Version ZERO = new Version("0.0.0");
+
     private final int[] parts;
     private static final int MAX_PARTS = 4; // Updated to support 4 parts
 

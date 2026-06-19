@@ -85,6 +85,13 @@ combat:
     color: RED    # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
     style: SOLID  # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
 
+  # Tag players in combat when explosion damage is dealt (mutual tag when causer is a player).
+  tag_explosion_damage:
+    enabled: true
+    end_crystal: true
+    respawn_anchor: true
+    tnt_minecart: true
+
 #---------------------------------------------------
 #              ITEM RESTRICTIONS
 #---------------------------------------------------
