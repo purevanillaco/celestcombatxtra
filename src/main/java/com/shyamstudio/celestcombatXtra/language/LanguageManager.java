@@ -386,6 +386,23 @@ public class LanguageManager {
         return getRawMessage(key + ".action_bar", placeholders);
     }
 
+    // reads combat_nametag.prefix — colors + placeholders applied
+    public String getNametagPrefix(Map<String, String> placeholders) {
+        String v = getRawMessage("combat_nametag.prefix", placeholders);
+        return v != null ? v : "";
+    }
+
+    // reads combat_nametag.suffix — colors + placeholders applied
+    public String getNametagSuffix(Map<String, String> placeholders) {
+        String v = getRawMessage("combat_nametag.suffix", placeholders);
+        return v != null ? v : "";
+    }
+
+    // reads <key>.title — colors applied, %time% left for runtime substitution
+    public String getBossBarTitle(String key, Map<String, String> placeholders) {
+        return getRawMessage(key + ".title", placeholders);
+    }
+
     public String getSound(String key) {
         if (!isMessageEnabled(key)) {
             return null;

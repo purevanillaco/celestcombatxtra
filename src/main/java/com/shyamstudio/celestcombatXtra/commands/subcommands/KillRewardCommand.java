@@ -52,7 +52,7 @@ public class KillRewardCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length < 1 || args.length > 2) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra killReward check <player> [target_player]");
+            messageService.sendMessage(sender, "command_usage_kill_reward_check", placeholders);
             return true;
         }
 
@@ -107,7 +107,7 @@ public class KillRewardCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length != 1) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra killReward clear <player>");
+            messageService.sendMessage(sender, "command_usage_kill_reward_clear", placeholders);
             return true;
         }
 
@@ -134,7 +134,7 @@ public class KillRewardCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length != 0) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra killReward clearAll");
+            messageService.sendMessage(sender, "command_usage_kill_reward_clear_all", placeholders);
             return true;
         }
 
@@ -158,10 +158,7 @@ public class KillRewardCommand extends BaseCommand {
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage("§cUsage:");
-        sender.sendMessage("§c/celestcombat-xtra killReward check <player> [target_player]");
-        sender.sendMessage("§c/celestcombat-xtra killReward clear <player>");
-        sender.sendMessage("§c/celestcombat-xtra killReward clearAll");
+        messageService.sendMessage(sender, "command_usage_kill_reward", new java.util.HashMap<>());
     }
 
     private String formatTime(long milliseconds) {

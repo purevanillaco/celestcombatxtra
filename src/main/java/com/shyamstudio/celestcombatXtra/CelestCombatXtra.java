@@ -83,13 +83,15 @@ public class CelestCombatXtra extends CelestCombatPro {
     if (windChargeListener != null) {
       windChargeListener.reloadFromConfig();
     }
+    List<String> skipped = Collections.emptyList();
     if (generalItemCooldownListener != null) {
-      return generalItemCooldownListener.reloadFromConfig();
+      skipped = generalItemCooldownListener.reloadFromConfig();
     }
+    // must run even when general cooldown returns early
     if (itemLimiterListener != null) {
       itemLimiterListener.reloadLimits();
     }
-    return Collections.emptyList();
+    return skipped;
   }
 
   @Override

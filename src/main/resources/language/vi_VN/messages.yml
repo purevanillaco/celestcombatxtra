@@ -1,5 +1,24 @@
 prefix: ""
 
+# ============================================================
+# ACTION BAR COMBAT MESSAGES (edit the action_bar: value)
+#   combat_countdown           – combat timer
+#   combat_pearl_countdown     – combat + ngọc ender
+#   combat_trident_countdown   – combat + đinh ba
+#   combat_wind_countdown      – combat + wind charge
+#   combat_pearl_trident_countdown – tất cả
+#   pearl_only_countdown       – chỉ ngọc ender
+#   trident_only_countdown     – chỉ đinh ba
+#   pearl_trident_countdown    – ngọc ender + đinh ba
+#   windcharge_cooldown        – wind charge
+#   mace_cooldown              – chùy
+#   general_item_cooldown      – vật phẩm chung
+#
+# Placeholders (action bar + combat_bossbar.title):
+#   %time% %time_seconds% %time_formatted% %max_time% %combat_time%
+#   %opponent% %opponent_display%
+# ============================================================
+
 # ------------------------------------------------------
 #                  Combat messages
 # ------------------------------------------------------
@@ -327,6 +346,76 @@ newbie_protection_not_protected:
 newbie_protection_check_protected:
   message: "&#4CAF50%player% có bảo vệ người chơi mới còn lại %time%"
   sound: block.note_block.pling
+
+# ------------------------------------------------------
+#          Combat nametag + bossbar display text
+# ------------------------------------------------------
+# Placeholders: %opponent%, %opponent_display%, %time%, %time_seconds%
+combat_nametag:
+  prefix: "&c⚔ "
+  suffix: " &7(%time%s)"
+
+# Placeholders: %time% %time_seconds% %time_formatted% %max_time% %opponent% %opponent_display%
+combat_bossbar:
+  title: "&c⚔ vs %opponent%: &f%time_formatted% &7/ %max_time%s"
+
+# Placeholder: %time%
+newbie_protection_bossbar:
+  title: "&#4CAF50Bảo vệ PvP: &#FFFFFF%time%"
+
+# ------------------------------------------------------
+#             Command usage messages
+# ------------------------------------------------------
+command_usage_tag:
+  message: "&cCách dùng: /ccx tag <player1> [player2]"
+
+command_usage_remove_tag:
+  message: |
+    &cCách dùng:
+    &c  /ccx removeTag player <player>
+    &c  /ccx removeTag world <world>
+    &c  /ccx removeTag all
+
+command_usage_kill_reward:
+  message: |
+    &cCách dùng:
+    &c  /ccx killReward check <player> [target]
+    &c  /ccx killReward clear <player>
+    &c  /ccx killReward clearAll
+
+command_usage_newbie_protection:
+  message: |
+    &cCách dùng:
+    &c  /ccx newbieProtection give <player>
+    &c  /ccx newbieProtection remove <player>
+    &c  /ccx newbieProtection check <player>
+
+command_usage_remove_tag_player:
+  message: "&cCách dùng: /ccx removeTag player <player>"
+
+command_usage_remove_tag_world:
+  message: "&cCách dùng: /ccx removeTag world <world>"
+
+command_usage_remove_tag_all:
+  message: "&cCách dùng: /ccx removeTag all"
+
+command_usage_kill_reward_check:
+  message: "&cCách dùng: /ccx killReward check <player> [target_player]"
+
+command_usage_kill_reward_clear:
+  message: "&cCách dùng: /ccx killReward clear <player>"
+
+command_usage_kill_reward_clear_all:
+  message: "&cCách dùng: /ccx killReward clearAll"
+
+command_usage_newbie_protection_give:
+  message: "&cCách dùng: /ccx newbieProtection give <player>"
+
+command_usage_newbie_protection_remove:
+  message: "&cCách dùng: /ccx newbieProtection remove <player>"
+
+command_usage_newbie_protection_check:
+  message: "&cCách dùng: /ccx newbieProtection check <player>"
 
 # ------------------------------------------------------
 #                  Phase 1: Cooldowns

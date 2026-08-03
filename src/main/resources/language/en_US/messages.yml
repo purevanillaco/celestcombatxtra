@@ -1,5 +1,28 @@
 prefix: ""
 
+# ============================================================
+# ACTION BAR COMBAT MESSAGES (edit the action_bar: value)
+#   combat_countdown           – solo combat timer
+#   combat_pearl_countdown     – combat + pearl cooldown
+#   combat_trident_countdown   – combat + trident cooldown
+#   combat_wind_countdown      – combat + wind charge cooldown
+#   combat_pearl_trident_countdown – all three active
+#   pearl_only_countdown       – pearl cooldown (no combat)
+#   trident_only_countdown     – trident cooldown (no combat)
+#   pearl_trident_countdown    – pearl + trident (no combat)
+#   windcharge_cooldown        – wind charge cooldown bar
+#   mace_cooldown              – mace cooldown bar
+#   general_item_cooldown      – generic item cooldown bar
+#
+# Combat timer placeholders (action bar + combat_bossbar.title):
+#   %time% %time_seconds%  – remaining seconds
+#   %time_formatted%       – m:ss when >= 60s, else Ns
+#   %max_time%             – full combat duration (seconds)
+#   %combat_time%          – same as %time% (merged bars)
+#   %opponent%             – opponent name
+#   %opponent_display%     – opponent display name
+# ============================================================
+
 # ------------------------------------------------------
 #                  Combat messages
 # ------------------------------------------------------
@@ -330,6 +353,76 @@ newbie_protection_not_protected:
 newbie_protection_check_protected:
   message: "&#4CAF50%player% has newbie protection with %time% remaining"
   sound: block.note_block.pling
+
+# ------------------------------------------------------
+#          Combat nametag + bossbar display text
+# ------------------------------------------------------
+# Placeholders: %opponent%, %opponent_display%, %time%, %time_seconds%
+combat_nametag:
+  prefix: "&c⚔ "
+  suffix: " &7(%time%s)"
+
+# Placeholders: %time% %time_seconds% %time_formatted% %max_time% %opponent% %opponent_display%
+combat_bossbar:
+  title: "&c⚔ vs %opponent%: &f%time_formatted% &7/ %max_time%s"
+
+# Placeholder: %time% (remaining duration string)
+newbie_protection_bossbar:
+  title: "&#4CAF50PvP Protection: &#FFFFFF%time%"
+
+# ------------------------------------------------------
+#             Command usage messages
+# ------------------------------------------------------
+command_usage_tag:
+  message: "&cUsage: /ccx tag <player1> [player2]"
+
+command_usage_remove_tag:
+  message: |
+    &cUsage:
+    &c  /ccx removeTag player <player>
+    &c  /ccx removeTag world <world>
+    &c  /ccx removeTag all
+
+command_usage_kill_reward:
+  message: |
+    &cUsage:
+    &c  /ccx killReward check <player> [target]
+    &c  /ccx killReward clear <player>
+    &c  /ccx killReward clearAll
+
+command_usage_newbie_protection:
+  message: |
+    &cUsage:
+    &c  /ccx newbieProtection give <player>
+    &c  /ccx newbieProtection remove <player>
+    &c  /ccx newbieProtection check <player>
+
+command_usage_remove_tag_player:
+  message: "&cUsage: /ccx removeTag player <player>"
+
+command_usage_remove_tag_world:
+  message: "&cUsage: /ccx removeTag world <world>"
+
+command_usage_remove_tag_all:
+  message: "&cUsage: /ccx removeTag all"
+
+command_usage_kill_reward_check:
+  message: "&cUsage: /ccx killReward check <player> [target_player]"
+
+command_usage_kill_reward_clear:
+  message: "&cUsage: /ccx killReward clear <player>"
+
+command_usage_kill_reward_clear_all:
+  message: "&cUsage: /ccx killReward clearAll"
+
+command_usage_newbie_protection_give:
+  message: "&cUsage: /ccx newbieProtection give <player>"
+
+command_usage_newbie_protection_remove:
+  message: "&cUsage: /ccx newbieProtection remove <player>"
+
+command_usage_newbie_protection_check:
+  message: "&cUsage: /ccx newbieProtection check <player>"
 
 # ------------------------------------------------------
 #                  Phase 1: Cooldowns

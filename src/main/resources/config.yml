@@ -71,17 +71,15 @@ combat:
   # Disable flight (Creative fly) during combat
   disable_flight: false
 
-  # Scoreboard team prefix/suffix while combat-tagged (& for colors).
-  # Placeholders: %opponent% %opponent_display% %time% %time_seconds% (remaining combat seconds)
+  # Scoreboard team prefix/suffix while combat-tagged.
+  # Edit prefix/suffix text in language/<locale>/messages.yml → combat_nametag
   nametag:
     enabled: false
-    prefix: "&c⚔ "
-    suffix: " &7(%time%s)"
 
-  # Optional boss bar showing combat countdown (off by default)
+  # Optional boss bar showing combat countdown (off by default).
+  # Edit title text in language/<locale>/messages.yml → combat_bossbar
   bossbar:
     enabled: false
-    title: "&c⚔ Combat: &f%time%s remaining"
     color: RED    # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
     style: SOLID  # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
 
@@ -227,6 +225,8 @@ item_limiter:
   limits:
     TOTEM_OF_UNDYING: 3
     GOLDEN_APPLE: 64
+    # COBWEB: 64
+    # ENCHANTED_GOLDEN_APPLE: 16
 
 #---------------------------------------------------
 #              SPEAR (1.21+)
@@ -418,8 +418,8 @@ newbie_protection:
     use_bossbar: true
     use_actionbar: false
 
+    # Edit bossbar title text in language/<locale>/messages.yml → newbie_protection_bossbar
     bossbar:
-      title: "&#4CAF50PvP Protection: &#FFFFFF%time%"
       color: "GREEN"      # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
       style: "SOLID"      # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
 

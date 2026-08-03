@@ -138,10 +138,17 @@ public class UpdateChecker implements Listener {
             if (latest.compareTo(current) > 0) {
                 latestVersion = bestVersionLabel.isEmpty() ? latest.toString() : bestVersionLabel;
                 updateAvailable = true;
+                if (plugin.getConfig().getBoolean("debug", false)) {
+                    plugin.getLogger().info("[UpdateChecker] update available: current=" + current
+                            + " latest=" + latest + " (" + bestVersionLabel + ")");
+                }
                 return true;
             }
 
             updateAvailable = false;
+            if (plugin.getConfig().getBoolean("debug", false)) {
+                plugin.getLogger().info("[UpdateChecker] up to date: current=" + current + " latest=" + latest);
+            }
             return false;
         });
     }
@@ -226,6 +233,7 @@ public class UpdateChecker implements Listener {
 
     private JsonObject pickNewestByDate(JsonArray versions, boolean releaseOnly) {
         JsonObject newest = null;
+        Version newestVersion = Version.ZERO;
         for (JsonElement element : versions) {
             JsonObject version = element.getAsJsonObject();
             if (releaseOnly) {
@@ -234,14 +242,11 @@ public class UpdateChecker implements Listener {
                     continue;
                 }
             }
-            if (newest == null) {
+            if (!version.has("version_number")) continue;
+            Version candidate = new Version(version.get("version_number").getAsString());
+            if (newest == null || candidate.compareTo(newestVersion) > 0) {
                 newest = version;
-                continue;
-            }
-            String currentDate = newest.get("date_published").getAsString();
-            String newDate = version.get("date_published").getAsString();
-            if (newDate.compareTo(currentDate) > 0) {
-                newest = version;
+                newestVersion = candidate;
             }
         }
         return newest;

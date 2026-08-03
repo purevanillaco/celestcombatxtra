@@ -51,7 +51,7 @@ public class NewbieProtectionCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length != 1) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra newbieProtection give <player>");
+            messageService.sendMessage(sender, "command_usage_newbie_protection_give", placeholders);
             return true;
         }
 
@@ -85,7 +85,7 @@ public class NewbieProtectionCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length != 1) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra newbieProtection remove <player>");
+            messageService.sendMessage(sender, "command_usage_newbie_protection_remove", placeholders);
             return true;
         }
 
@@ -119,7 +119,7 @@ public class NewbieProtectionCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length != 1) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra newbieProtection check <player>");
+            messageService.sendMessage(sender, "command_usage_newbie_protection_check", placeholders);
             return true;
         }
 
@@ -150,10 +150,7 @@ public class NewbieProtectionCommand extends BaseCommand {
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage("§cUsage:");
-        sender.sendMessage("§c/celestcombat-xtra newbieProtection give <player>");
-        sender.sendMessage("§c/celestcombat-xtra newbieProtection remove <player>");
-        sender.sendMessage("§c/celestcombat-xtra newbieProtection check <player>");
+        messageService.sendMessage(sender, "command_usage_newbie_protection", new java.util.HashMap<>());
     }
 
     private String formatTime(long seconds) {

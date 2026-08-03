@@ -52,7 +52,7 @@ public class RemoveTagCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length != 1) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra removeTag player <player>");
+            messageService.sendMessage(sender, "command_usage_remove_tag_player", placeholders);
             return true;
         }
 
@@ -88,7 +88,7 @@ public class RemoveTagCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length != 1) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra removeTag world <world>");
+            messageService.sendMessage(sender, "command_usage_remove_tag_world", placeholders);
             return true;
         }
 
@@ -134,7 +134,7 @@ public class RemoveTagCommand extends BaseCommand {
 
         // Validate arguments (no arguments needed)
         if (args.length != 0) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra removeTag all");
+            messageService.sendMessage(sender, "command_usage_remove_tag_all", placeholders);
             return true;
         }
 
@@ -163,10 +163,7 @@ public class RemoveTagCommand extends BaseCommand {
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage("§cUsage:");
-        sender.sendMessage("§c/celestcombat-xtra removeTag player <player>");
-        sender.sendMessage("§c/celestcombat-xtra removeTag world <world>");
-        sender.sendMessage("§c/celestcombat-xtra removeTag all");
+        messageService.sendMessage(sender, "command_usage_remove_tag", new java.util.HashMap<>());
     }
 
     @Override

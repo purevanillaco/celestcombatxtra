@@ -28,7 +28,7 @@ public class TagCommand extends BaseCommand {
 
         // Validate arguments
         if (args.length < 1 || args.length > 2) {
-            sender.sendMessage("§cUsage: /celestcombat-xtra tag <player1> [player2]");
+            messageService.sendMessage(sender, "command_usage_tag", placeholders);
             return true;
         }
 

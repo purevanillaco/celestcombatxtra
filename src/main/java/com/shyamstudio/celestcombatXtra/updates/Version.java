@@ -9,9 +9,15 @@ public class Version implements Comparable<Version> {
     private static final int MAX_PARTS = 4; // Updated to support 4 parts
 
     public Version(String version) {
-        // Remove any non-numeric prefix (e.g., "v1.0.0" -> "1.0.0")
+        if (version == null) version = "0.0.0";
+        version = version.trim();
+        if (version.startsWith("v") || version.startsWith("V")) {
+            version = version.substring(1).trim();
+        }
+        // strip suffix after numeric part (e.g. 1.2.0-SNAPSHOT -> 1.2.0)
         version = version.replaceAll("[^0-9.].*$", "")
                 .replaceAll("^[^0-9]*", "");
+        if (version.isEmpty()) version = "0.0.0";
 
         String[] split = version.split("\\.");
         parts = new int[MAX_PARTS]; // Initialize array with 4 parts

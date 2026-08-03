@@ -120,7 +120,8 @@ public class CombatManager {
 
     private void loadBossBarConfig() {
         this.bossBarEnabled = plugin.getConfig().getBoolean("combat.bossbar.enabled", false);
-        this.bossBarTitleTemplate = plugin.getConfig().getString("combat.bossbar.title", "&cCombat: &f%time%s remaining");
+        String langTitle = plugin.getLanguageManager().getBossBarTitle("combat_bossbar", java.util.Collections.emptyMap());
+        this.bossBarTitleTemplate = langTitle != null ? langTitle : "&c\u2694 Combat: &f%time%s remaining";
         String colorStr = plugin.getConfig().getString("combat.bossbar.color", "RED");
         try {
             this.bossBarColor = BarColor.valueOf(colorStr.toUpperCase());
@@ -133,6 +134,26 @@ public class CombatManager {
         } catch (IllegalArgumentException e) {
             this.bossBarStyle = BarStyle.SOLID;
         }
+    }
+
+    private Map<String, String> buildCombatDisplayPlaceholders(Player player, int remainingSeconds) {
+        Map<String, String> ph = new HashMap<>();
+        ph.put("time", String.valueOf(remainingSeconds));
+        ph.put("time_seconds", String.valueOf(remainingSeconds));
+        ph.put("time_formatted", formatCombatDisplayTime(remainingSeconds));
+        ph.put("max_time", String.valueOf(combatDurationSeconds));
+        ph.put("combat_time", String.valueOf(remainingSeconds));
+        Player opponent = getCombatOpponent(player);
+        ph.put("opponent", opponent != null ? opponent.getName() : "?");
+        ph.put("opponent_display", opponent != null ? opponent.getDisplayName() : "?");
+        return ph;
+    }
+
+    private static String formatCombatDisplayTime(int seconds) {
+        if (seconds >= 60) {
+            return (seconds / 60) + ":" + String.format("%02d", seconds % 60);
+        }
+        return seconds + "s";
     }
 
     public void setItemCooldownManager(ItemCooldownManager manager) {
@@ -310,7 +331,7 @@ public class CombatManager {
 
         if (inCombat) {
             int remainingCombatTime = getRemainingCombatTime(player, currentTime);
-            placeholders.put("combat_time", String.valueOf(remainingCombatTime));
+            placeholders.putAll(buildCombatDisplayPlaceholders(player, remainingCombatTime));
 
             if (hasPearlCooldown && hasTridentCooldown) {
                 // All three cooldowns active - show combined message
@@ -336,12 +357,10 @@ public class CombatManager {
                     boolean wind = itemCooldownManager != null
                             && itemCooldownManager.isWindChargeOnCooldown(player);
                     if (wind) {
-                        placeholders.put("combat_time", String.valueOf(remainingCombatTime));
                         placeholders.put("wind_time", String.valueOf(
                                 itemCooldownManager.getRemainingWindChargeCooldown(player)));
                         sendPhase1MergedActionBar(player, "combat_wind_countdown", placeholders, false);
                     } else {
-                        placeholders.put("time", String.valueOf(remainingCombatTime));
                         sendPhase1MergedActionBar(player, "combat_countdown", placeholders);
                     }
                 }
@@ -374,6 +393,8 @@ public class CombatManager {
             combatNametagManager.refresh(player);
             updateCombatBossBar(player, getRemainingCombatTime(player, currentTime));
         } else {
+            // defensive clear in case combat ended without going through removeFromCombat
+            combatNametagManager.clear(player);
             clearCombatBossBar(player);
         }
     }
@@ -387,9 +408,14 @@ public class CombatManager {
             return b;
         });
 
-        String title = bossBarTitleTemplate.replace("%time%", String.valueOf(remainingSeconds));
-        bar.setTitle(com.shyamstudio.celestcombatXtra.language.ColorUtil.translateHexColorCodes(
-                org.bukkit.ChatColor.translateAlternateColorCodes('&', title)));
+        String title = plugin.getLanguageManager().getBossBarTitle(
+                "combat_bossbar", buildCombatDisplayPlaceholders(player, remainingSeconds));
+        if (title == null) {
+            title = bossBarTitleTemplate.replace("%time%", String.valueOf(remainingSeconds));
+            title = ColorUtil.translateHexColorCodes(
+                    org.bukkit.ChatColor.translateAlternateColorCodes('&', title));
+        }
+        bar.setTitle(title);
         bar.setProgress(Math.max(0, Math.min(1, remainingSeconds / (double) combatDurationSeconds)));
         bar.setVisible(true);
     }

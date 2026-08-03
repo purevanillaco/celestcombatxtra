@@ -80,7 +80,8 @@ public class NewbieProtectionManager {
 
         this.useBossBar = config.getBoolean("newbie_protection.display.use_bossbar", true);
         this.useActionBar = config.getBoolean("newbie_protection.display.use_actionbar", false);
-        this.bossBarTitle = config.getString("newbie_protection.display.bossbar.title", "&#4CAF50PvP Protection: &#FFFFFF%time%");
+        String langTitle = plugin.getLanguageManager().getBossBarTitle("newbie_protection_bossbar", java.util.Collections.emptyMap());
+        this.bossBarTitle = langTitle != null ? langTitle : "&#4CAF50PvP Protection: &#FFFFFF%time%";
 
         // Parse boss bar color
         String colorStr = config.getString("newbie_protection.display.bossbar.color", "GREEN");
