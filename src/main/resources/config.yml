@@ -233,14 +233,15 @@ item_limiter:
 #---------------------------------------------------
 spear_control:
   enabled: false
-  bypass_permission: celestcombatxtra.bypass.spear_control
-  # If true, blocks all spear use (right-click lunge and left-click jab); works even when enabled is false
+  # only apply spear rules while tagged in combat
+  in_combat_only: false
+  # blocks all spear use: lunge/dash + right-click + jab; works even when enabled is false
   disable_spears: false
+  # cancels all spear melee and thrown spear damage; works even when enabled is false
+  disable_damage: false
   lunge_cooldown:
     enabled: true
     duration: "2s"
-  # If true, spear melee and spear projectile deal no damage
-  disable_damage: false
 
 #---------------------------------------------------
 #              ENDER PEARL RESTRICTIONS
@@ -444,7 +445,7 @@ safezone_protection:
 
   # Block type for the barrier
   # Set "BARRIER" for invisible but solid barrier
-  # Valid materials can be found at: https://jd.papermc.io/paper/1.21.5/org/bukkit/Material.html
+  # Valid materials can be found at: https://jd.papermc.io/paper/26.2/org/bukkit/Material.html
   barrier_material: "RED_STAINED_GLASS"
 
   # How close the player to borders before barriers appear
@@ -479,7 +480,7 @@ claim_protection:
 
   # Block type for the barrier around protected claims
   # Set "BARRIER" for invisible but solid barrier
-  # Valid materials can be found at: https://jd.papermc.io/paper/1.21.5/org/bukkit/Material.html
+  # Valid materials can be found at: https://jd.papermc.io/paper/26.2/org/bukkit/Material.html
   barrier_material: "BLUE_STAINED_GLASS"
 
   # How close the player needs to be to claim borders before barriers appear

@@ -24,6 +24,7 @@ import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager.CooldownKey
 import com.shyamstudio.celestcombatXtra.cooldown.UseCooldowns;
 import com.shyamstudio.celestcombatXtra.language.ColorUtil;
 import com.shyamstudio.celestcombatXtra.language.MessageService;
+import com.shyamstudio.celestcombatXtra.util.SpearMaterials;
 
 import io.papermc.paper.event.player.PlayerArmSwingEvent;
 
@@ -39,7 +40,6 @@ public final class GeneralItemCooldownListener implements Listener {
 
   // Not all Paper versions expose a COPPER_HORN Material constant; use matchMaterial for safety.
   private static final Material COPPER_HORN_MATERIAL = Material.matchMaterial("COPPER_HORN");
-  private static final Material SPEAR_MATERIAL = Material.matchMaterial("SPEAR");
   private static final Material ICE_BOMB_MATERIAL = Material.matchMaterial("ICE_BOMB");
   private static final CooldownKey MACE_COOLDOWN_KEY = new CooldownKey(Material.MACE, null);
 
@@ -133,7 +133,7 @@ public final class GeneralItemCooldownListener implements Listener {
         skippedReserved.add(material.name());
         plugin.getLogger().warning(
             "[CelestCombatXtra] Ignoring cooldowned_items entry for " + material.name()
-                + " — use enderpearl, trident, windcharge, elytra/item_restrictions, or mace config instead.");
+                + " — use enderpearl, trident, windcharge, elytra/item_restrictions, mace, or spear_control config instead.");
         continue;
       }
 
@@ -175,7 +175,8 @@ public final class GeneralItemCooldownListener implements Listener {
         || material == Material.TRIDENT
         || material == Material.WIND_CHARGE
         || material == Material.ELYTRA
-        || material == Material.MACE;
+        || material == Material.MACE
+        || SpearMaterials.isSpear(material);
   }
 
   private static boolean parseConfigBool(Map<?, ?> raw, String key, boolean defaultValue) {
@@ -390,11 +391,14 @@ public final class GeneralItemCooldownListener implements Listener {
       material = Material.SNOWBALL;
     } else if (projectile instanceof Egg) {
       material = Material.EGG;
-    } else if (SPEAR_MATERIAL != null && player.getInventory().getItemInMainHand().getType() == SPEAR_MATERIAL) {
-      // Spear throws start cooldown when the projectile launches.
-      material = SPEAR_MATERIAL;
-    } else if (ICE_BOMB_MATERIAL != null && player.getInventory().getItemInMainHand().getType() == ICE_BOMB_MATERIAL) {
-      material = ICE_BOMB_MATERIAL;
+    } else {
+      Material mainHand = player.getInventory().getItemInMainHand().getType();
+      if (SpearMaterials.isSpear(mainHand)) {
+        // spear throws start cooldown when the projectile launches
+        material = mainHand;
+      } else if (ICE_BOMB_MATERIAL != null && mainHand == ICE_BOMB_MATERIAL) {
+        material = ICE_BOMB_MATERIAL;
+      }
     }
 
     if (material == null) return;

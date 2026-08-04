@@ -1,6 +1,7 @@
 package com.shyamstudio.celestcombatXtra.listeners;
 
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.Event;
@@ -9,21 +10,26 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.player.PlayerAnimationEvent;
+import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerVelocityEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 
 import io.papermc.paper.event.player.PlayerArmSwingEvent;
-import org.bukkit.inventory.ItemStack;
 
 import com.shyamstudio.celestcombatXtra.CelestCombatPro;
 import com.shyamstudio.celestcombatXtra.Scheduler;
 import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager;
 import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager.CooldownKey;
-import com.shyamstudio.celestcombatXtra.cooldown.UseCooldowns;
+import com.shyamstudio.celestcombatXtra.util.SpearMaterials;
 
 import net.md_5.bungee.api.chat.TextComponent;
 
-import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -34,158 +40,174 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class SpearControlListener implements Listener {
 
-  private static final Set<Material> SPEAR_MATERIALS = resolveSpearMaterials();
-  private static final long COOLDOWN_ACTION_BAR_INTERVAL = 20L;
+  private static final String BYPASS = "celestcombatxtra.bypass.spear_control";
+  private static final double LUNGE_VELOCITY_MIN = 0.3D;
 
   private final CelestCombatPro plugin;
   private final ItemCooldownManager cooldownManager;
-  private final Map<UUID, Scheduler.Task> spearCountdownTasks = new ConcurrentHashMap<>();
+  private final Set<UUID> blockNextVelocity = ConcurrentHashMap.newKeySet();
 
   public SpearControlListener(CelestCombatPro plugin, ItemCooldownManager cooldownManager) {
     this.plugin = plugin;
     this.cooldownManager = cooldownManager;
   }
 
-  private static Set<Material> resolveSpearMaterials() {
-    Set<Material> spears = EnumSet.noneOf(Material.class);
-    for (Material m : Material.values()) {
-      if (m.isAir()) continue;
-      String name = m.name();
-      if ("SPEAR".equals(name) || name.endsWith("_SPEAR")) {
-        spears.add(m);
-      }
-    }
-    Material legacy = Material.matchMaterial("SPEAR");
-    if (legacy != null) spears.add(legacy);
-    return spears;
-  }
-
-  private static boolean isSpear(Material material) {
-    return material != null && SPEAR_MATERIALS.contains(material);
-  }
-
   private static CooldownKey lungeKey(Material material) {
-    return new CooldownKey(material, "lunge");
+    return new CooldownKey(material, ItemCooldownManager.LUNGE_META_KEY);
   }
 
   private boolean master() {
     return plugin.getConfig().getBoolean("spear_control.enabled", false);
   }
 
-  private String bypass() {
-    return plugin.getConfig().getString("spear_control.bypass_permission", "celestcombatxtra.bypass.spear_control");
+  private boolean appliesTo(Player player) {
+    if (player == null || player.hasPermission(BYPASS)) return false;
+    if (plugin.getConfig().getBoolean("spear_control.in_combat_only", false)
+        && !plugin.getCombatManager().isInCombat(player)) {
+      return false;
+    }
+    return true;
   }
 
+  /**
+   * 26.x backup cancel hook. returns true when the lunge should be cancelled.
+   */
+  public boolean handleLungeAttempt(Player player, Material spearMaterial) {
+    return shouldBlockLunge(player, spearMaterial);
+  }
+
+  private boolean shouldBlockLunge(Player player, Material spearMaterial) {
+    if (player == null || spearMaterial == null || !SpearMaterials.isSpear(spearMaterial)) return false;
+
+    if (plugin.getConfig().getBoolean("spear_control.disable_spears", false)) {
+      if (!appliesTo(player)) return false;
+      notifySpearDisabled(player);
+      return true;
+    }
+
+    if (!master()) return false;
+    if (!plugin.getConfig().getBoolean("spear_control.lunge_cooldown.enabled", true)) return false;
+    if (!appliesTo(player)) return false;
+
+    CooldownKey key = lungeKey(spearMaterial);
+    if (cooldownManager.isGeneralItemOnCooldown(player, key)) {
+      refreshLungeOverlay(player, spearMaterial, key);
+      return true;
+    }
+    return false;
+  }
+
+  /** arm swing lunge detect (same approach as lunge-cooldown reference plugin) */
   @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-  public void onSpearInteract(PlayerInteractEvent event) {
-    if (SPEAR_MATERIALS.isEmpty()) return;
-    if (event.getHand() != EquipmentSlot.HAND) return;
-    if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+  public void onSpearLungeAnimation(PlayerAnimationEvent event) {
+    if (event.getAnimationType() != PlayerAnimationType.ARM_SWING) return;
 
     Player player = event.getPlayer();
-    ItemStack item = event.getItem();
-    if (item == null || !isSpear(item.getType())) return;
+    ItemStack main = player.getInventory().getItemInMainHand();
+    if (!isLungeAttempt(main)) return;
 
-    Material spearMaterial = item.getType();
-    CooldownKey lungeKey = lungeKey(spearMaterial);
+    Material spearMaterial = main.getType();
+    CooldownKey key = lungeKey(spearMaterial);
 
-    // disable_spears: block all spear use (right-click) - works even when spear_control.enabled is false
     if (plugin.getConfig().getBoolean("spear_control.disable_spears", false)) {
-      if (player.hasPermission(bypass())) return;
+      if (!appliesTo(player)) return;
       event.setCancelled(true);
-      event.setUseItemInHand(Event.Result.DENY);
-      if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-        event.setUseInteractedBlock(Event.Result.DENY);
-      }
+      blockNextVelocity.add(player.getUniqueId());
       notifySpearDisabled(player);
       return;
     }
 
     if (!master()) return;
-    // when right-clicking block, deny block interaction so spear receives it
-    if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-      event.setUseInteractedBlock(Event.Result.DENY);
-    }
-
     if (!plugin.getConfig().getBoolean("spear_control.lunge_cooldown.enabled", true)) return;
-    if (player.hasPermission(bypass())) return;
+    if (!appliesTo(player)) return;
 
-    if (cooldownManager.isGeneralItemOnCooldown(player, lungeKey)) {
+    long cooldownMs = getLungeCooldownMs();
+    if (cooldownMs <= 0) return;
+
+    if (cooldownManager.isGeneralItemOnCooldown(player, key)) {
       event.setCancelled(true);
-      event.setUseItemInHand(Event.Result.DENY);
-      int remaining = cooldownManager.getRemainingGeneralItemCooldown(player, lungeKey);
-      int rt = cooldownManager.getRemainingGeneralItemCooldownTicks(player, lungeKey);
-      if (rt > 0) {
-        player.setCooldown(spearMaterial, rt);
-      }
-      UseCooldowns.applyUseCooldownIfKnown(player, spearMaterial);
-      String bar = plugin.getLanguageManager().getActionBar("spear_lunge_cooldown",
-          Map.of("time", String.valueOf(remaining)));
-      if (bar != null) {
-        plugin.sendActionBar(player, TextComponent.fromLegacyText(bar));
-      }
+      blockNextVelocity.add(player.getUniqueId());
+      refreshLungeOverlay(player, spearMaterial, key);
       return;
     }
 
-    String durStr = plugin.getConfig().getString("spear_control.lunge_cooldown.duration", "1s");
-    long durationTicks = plugin.getTimeFormatter().parseTimeToTicks(durStr, 20L);
-    long ms = Math.max(0L, durationTicks * 50L);
-    if (ms <= 0) return;
-
-    // start cooldown immediately so physical overlay blocks spam (like wind charge / pearls)
-    cooldownManager.startGeneralCooldown(player, lungeKey, ms);
-    startSpearCooldownActionBar(player, lungeKey);
+    cooldownManager.startGeneralCooldown(player, key, cooldownMs);
   }
 
-  private void startSpearCooldownActionBar(Player player, CooldownKey lungeKey) {
-    if (player == null) return;
-    if (plugin.isActionBarDisabled()) return;
-    UUID uuid = player.getUniqueId();
-    Scheduler.Task existing = spearCountdownTasks.get(uuid);
-    if (existing != null) existing.cancel();
+  /** stop dash velocity when lunge was blocked on cooldown */
+  @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+  public void onLungeVelocity(PlayerVelocityEvent event) {
+    Player player = event.getPlayer();
+    if (!blockNextVelocity.remove(player.getUniqueId())) return;
 
-    Scheduler.Task task = Scheduler.runTaskTimer(() -> {
-      if (!player.isOnline()) {
-        spearCountdownTasks.remove(uuid);
-        return;
+    Vector velocity = event.getVelocity();
+    double horizontal = Math.sqrt(velocity.getX() * velocity.getX() + velocity.getZ() * velocity.getZ());
+    if (horizontal <= LUNGE_VELOCITY_MIN) return;
+
+    Scheduler.runTaskLater(() -> {
+      if (player.isOnline()) {
+        player.setVelocity(new Vector(0, 0, 0));
       }
-      if (!cooldownManager.isGeneralItemOnCooldown(player, lungeKey)) {
-        Scheduler.Task t = spearCountdownTasks.remove(uuid);
-        if (t != null) t.cancel();
-        return;
-      }
-      int remaining = cooldownManager.getRemainingGeneralItemCooldown(player, lungeKey);
-      int rt = cooldownManager.getRemainingGeneralItemCooldownTicks(player, lungeKey);
-      if (rt > 0 && lungeKey.material() != null) {
-        player.setCooldown(lungeKey.material(), rt);
-      }
-      String bar = plugin.getLanguageManager().getActionBar("spear_lunge_cooldown",
-          Map.of("time", String.valueOf(remaining)));
-      if (bar != null) {
-        plugin.sendActionBar(player, TextComponent.fromLegacyText(bar));
-      }
-    }, 0L, COOLDOWN_ACTION_BAR_INTERVAL);
-    spearCountdownTasks.put(uuid, task);
+    }, 1L);
+  }
+
+  @EventHandler(priority = EventPriority.MONITOR)
+  public void onQuit(PlayerQuitEvent event) {
+    blockNextVelocity.remove(event.getPlayer().getUniqueId());
+  }
+
+  @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+  public void onSpearInteract(PlayerInteractEvent event) {
+    if (SpearMaterials.all().isEmpty()) return;
+    if (event.getHand() != EquipmentSlot.HAND) return;
+    if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+
+    Player player = event.getPlayer();
+    ItemStack item = event.getItem();
+    if (item == null || !SpearMaterials.isSpear(item.getType())) return;
+
+    if (!plugin.getConfig().getBoolean("spear_control.disable_spears", false)) return;
+    if (!appliesTo(player)) return;
+
+    event.setCancelled(true);
+    event.setUseItemInHand(Event.Result.DENY);
+    if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+      event.setUseInteractedBlock(Event.Result.DENY);
+    }
+    notifySpearDisabled(player);
+  }
+
+  private long getLungeCooldownMs() {
+    String durStr = plugin.getConfig().getString("spear_control.lunge_cooldown.duration", "1s");
+    long durationTicks = plugin.getTimeFormatter().parseTimeToTicks(durStr, 20L);
+    return Math.max(0L, durationTicks * 50L);
+  }
+
+  private void refreshLungeOverlay(Player player, Material spearMaterial, CooldownKey key) {
+    cooldownManager.refreshGeneralItemCooldownOverlay(player, key);
+    int rt = cooldownManager.getRemainingGeneralItemCooldownTicks(player, key);
+    if (rt > 0) {
+      player.setCooldown(spearMaterial, rt);
+    }
   }
 
   public void shutdown() {
-    spearCountdownTasks.values().forEach(Scheduler.Task::cancel);
-    spearCountdownTasks.clear();
+    blockNextVelocity.clear();
   }
 
-  /** Cancels spear arm swing (lunge/jab) when disable_spears is true. */
+  /** cancels spear arm swing when disable_spears is true */
   @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
   public void onSpearArmSwing(PlayerArmSwingEvent event) {
-    if (SPEAR_MATERIALS.isEmpty()) return;
+    if (SpearMaterials.all().isEmpty()) return;
     if (!plugin.getConfig().getBoolean("spear_control.disable_spears", false)) return;
 
     Player player = event.getPlayer();
     ItemStack main = player.getInventory().getItemInMainHand();
     ItemStack off = player.getInventory().getItemInOffHand();
-    boolean hasSpear = (main != null && isSpear(main.getType()))
-        || (off != null && isSpear(off.getType()));
+    boolean hasSpear = (main != null && SpearMaterials.isSpear(main.getType()))
+        || (off != null && SpearMaterials.isSpear(off.getType()));
     if (!hasSpear) return;
-    if (player.hasPermission(bypass())) return;
+    if (!appliesTo(player)) return;
 
     event.setCancelled(true);
     notifySpearDisabled(player);
@@ -193,19 +215,34 @@ public final class SpearControlListener implements Listener {
 
   @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
   public void onSpearDamage(EntityDamageByEntityEvent event) {
-    if (SPEAR_MATERIALS.isEmpty()) return;
+    if (SpearMaterials.all().isEmpty()) return;
     boolean disableDamage = plugin.getConfig().getBoolean("spear_control.disable_damage", false);
     boolean disableSpears = plugin.getConfig().getBoolean("spear_control.disable_spears", false);
-    // disable_spears works independently; disable_damage requires spear_control.enabled
-    boolean shouldBlock = disableSpears || (disableDamage && master());
-    if (!shouldBlock) return;
-
+    if (!disableSpears && !disableDamage) return;
     if (!isSpearDamage(event)) return;
 
     Player attacker = resolveAttacker(event);
-    if (attacker != null && attacker.hasPermission(bypass())) return;
+    if (attacker != null && !appliesTo(attacker)) return;
 
     event.setCancelled(true);
+  }
+
+  private static boolean isLungeAttempt(ItemStack item) {
+    if (item == null || item.getType().isAir()) return false;
+    if (SpearMaterials.isSpear(item.getType())) return true;
+    return getLungeLevel(item) > 0;
+  }
+
+  private static int getLungeLevel(ItemStack item) {
+    if (item == null || item.getType().isAir() || !item.hasItemMeta()) return 0;
+    for (Map.Entry<Enchantment, Integer> entry : item.getEnchantments().entrySet()) {
+      Enchantment enchant = entry.getKey();
+      if (enchant == null) continue;
+      if (enchant.getKey().getKey().toLowerCase(Locale.ROOT).contains("lunge")) {
+        return entry.getValue();
+      }
+    }
+    return 0;
   }
 
   private Player resolveAttacker(EntityDamageByEntityEvent event) {
@@ -221,7 +258,7 @@ public final class SpearControlListener implements Listener {
   private boolean isSpearDamage(EntityDamageByEntityEvent event) {
     if (event.getDamager() instanceof Player p) {
       ItemStack hand = p.getInventory().getItemInMainHand();
-      return isSpear(hand.getType());
+      return SpearMaterials.isSpear(hand.getType());
     }
     if (event.getDamager() instanceof Projectile proj) {
       return proj.getType().name().contains("SPEAR");

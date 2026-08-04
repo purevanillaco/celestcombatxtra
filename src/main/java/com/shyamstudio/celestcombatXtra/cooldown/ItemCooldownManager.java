@@ -26,12 +26,15 @@ public final class ItemCooldownManager {
   public record CooldownKey(Material material, String metaKey) {}
   public record GeneralCooldownInfo(String itemName, int remainingSeconds) {}
 
+  public static final String LUNGE_META_KEY = "lunge";
+
   private final CelestCombatPro plugin;
 
   private final Map<UUID, Long> windChargeCooldownEnds = new ConcurrentHashMap<>();
   private final Map<UUID, Map<CooldownKey, Long>> generalItemCooldownEnds = new ConcurrentHashMap<>();
 
   private static final String WIND_CHARGE_ACTION_BAR_KEY = "windcharge_cooldown";
+  private static final String LUNGE_COOLDOWN_ACTION_BAR_KEY = "lunge_cooldown";
   private static final String GENERAL_ITEM_ACTION_BAR_KEY = "general_item_cooldown";
 
   private Scheduler.Task countdownTask;
@@ -80,6 +83,21 @@ public final class ItemCooldownManager {
             Map.of("time", String.valueOf(remainingSeconds)));
       }
 
+      // Lunge cooldown action bar (out of combat / standalone)
+      for (Map.Entry<UUID, Map<CooldownKey, Long>> entry : generalItemCooldownEnds.entrySet()) {
+        UUID uuid = entry.getKey();
+        Player player = plugin.getServer().getPlayer(uuid);
+        if (player == null || !player.isOnline()) continue;
+        if (shouldNotOverwriteCoreActionBar(player)) continue;
+        if (windChargeCooldownEnds.containsKey(uuid)) continue;
+
+        int lungeRemaining = getRemainingLungeCooldown(player);
+        if (lungeRemaining <= 0) continue;
+
+        sendActionBarOnly(player, LUNGE_COOLDOWN_ACTION_BAR_KEY,
+            Map.of("time", String.valueOf(lungeRemaining)));
+      }
+
       // General item cooldown action bars
       for (Map.Entry<UUID, Map<CooldownKey, Long>> entry : generalItemCooldownEnds.entrySet()) {
         UUID uuid = entry.getKey();
@@ -87,14 +105,16 @@ public final class ItemCooldownManager {
         if (player == null || !player.isOnline()) continue;
         if (shouldNotOverwriteCoreActionBar(player)) continue;
 
-        // If wind charge is active, don't overwrite its action bar.
+        // If wind charge or lunge is active, don't overwrite with generic item bar.
         if (windChargeCooldownEnds.containsKey(uuid)) continue;
+        if (getRemainingLungeCooldown(player) > 0) continue;
 
         Map<CooldownKey, Long> cooldowns = entry.getValue();
         if (cooldowns == null || cooldowns.isEmpty()) continue;
 
         CooldownKey soonestKey = cooldowns.entrySet().stream()
             .filter(e -> e.getValue() != null && now < e.getValue())
+            .filter(e -> !isLungeCooldownKey(e.getKey()))
             .min(Comparator.comparingLong(Map.Entry::getValue))
             .map(Map.Entry::getKey)
             .orElse(null);
@@ -258,6 +278,35 @@ public final class ItemCooldownManager {
     return Math.max(1, (int) Math.ceil(remainingMs / 50.0));
   }
 
+  public static boolean isLungeCooldownKey(CooldownKey key) {
+    return key != null && LUNGE_META_KEY.equals(key.metaKey());
+  }
+
+  public int getRemainingLungeCooldown(Player player) {
+    CooldownKey key = getSoonestLungeCooldownKey(player);
+    if (key == null) return 0;
+    return getRemainingGeneralItemCooldown(player, key);
+  }
+
+  private CooldownKey getSoonestLungeCooldownKey(Player player) {
+    if (player == null) return null;
+    UUID uuid = player.getUniqueId();
+    Map<CooldownKey, Long> cooldowns = generalItemCooldownEnds.get(uuid);
+    if (cooldowns == null || cooldowns.isEmpty()) return null;
+
+    long now = System.currentTimeMillis();
+    return cooldowns.entrySet().stream()
+        .filter(e -> isLungeCooldownKey(e.getKey()))
+        .filter(e -> e.getValue() != null && now < e.getValue())
+        .min(Comparator.comparingLong(Map.Entry::getValue))
+        .map(Map.Entry::getKey)
+        .orElse(null);
+  }
+
+  public void refreshGeneralItemCooldownOverlay(Player player, CooldownKey key) {
+    scheduleGeneralItemCooldownRefresh(player, key);
+  }
+
   /**
    * Returns the soonest active general item cooldown for the given player.
    * This is used to merge cooldowns into the combat/pearl/trident action bar.
@@ -278,6 +327,7 @@ public final class ItemCooldownManager {
     long now = System.currentTimeMillis();
     CooldownKey soonestKey = cooldowns.entrySet().stream()
         .filter(e -> e.getValue() != null && now < e.getValue())
+        .filter(e -> !isLungeCooldownKey(e.getKey()))
         .filter(e -> excludeMaterial == null || e.getKey().material() != excludeMaterial)
         .min(Comparator.comparingLong(Map.Entry::getValue))
         .map(Map.Entry::getKey)
@@ -318,6 +368,15 @@ public final class ItemCooldownManager {
           "mace_cooldown", Map.of("time", String.valueOf(remainingMace)));
       if (maceLine != null) {
         merged.append(ColorUtil.translateHexColorCodes(" &#8B8B8B| ")).append(maceLine);
+      }
+    }
+
+    int lungeRemaining = getRemainingLungeCooldown(player);
+    if (lungeRemaining > 0) {
+      String lungeLine = plugin.getLanguageManager().getActionBar(
+          LUNGE_COOLDOWN_ACTION_BAR_KEY, Map.of("time", String.valueOf(lungeRemaining)));
+      if (lungeLine != null) {
+        merged.append(ColorUtil.translateHexColorCodes(" &#8B8B8B| ")).append(lungeLine);
       }
     }
 

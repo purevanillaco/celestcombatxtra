@@ -1,5 +1,6 @@
 package com.shyamstudio.celestcombatXtra.cooldown;
 
+import com.shyamstudio.celestcombatXtra.util.SpearMaterials;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
@@ -24,7 +25,9 @@ public final class UseCooldowns {
     add("WIND_CHARGE", 20);
     add("SPEAR", 20);
     add("FIREWORK_ROCKET", 20);
-    registerSpearMaterials(20);
+    for (Material spear : SpearMaterials.all()) {
+      USE_COOLDOWN_TICKS.putIfAbsent(spear, 20);
+    }
 
     // 7 seconds / 140 ticks
     add("GOAT_HORN", 140);
@@ -42,16 +45,6 @@ public final class UseCooldowns {
     Material material = Material.matchMaterial(materialName);
     if (material != null && ticks > 0) {
       USE_COOLDOWN_TICKS.put(material, ticks);
-    }
-  }
-
-  private static void registerSpearMaterials(int ticks) {
-    for (Material m : Material.values()) {
-      if (m.isAir()) continue;
-      String name = m.name();
-      if ("SPEAR".equals(name) || name.endsWith("_SPEAR")) {
-        USE_COOLDOWN_TICKS.putIfAbsent(m, ticks);
-      }
     }
   }
 

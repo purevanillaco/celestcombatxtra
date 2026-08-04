@@ -12,6 +12,7 @@ prefix: ""
 #   pearl_trident_countdown    – pearl + trident (no combat)
 #   windcharge_cooldown        – wind charge cooldown bar
 #   mace_cooldown              – mace cooldown bar
+#   lunge_cooldown             – spear lunge cooldown bar
 #   general_item_cooldown      – generic item cooldown bar
 #
 # Combat timer placeholders (action bar + combat_bossbar.title):
@@ -93,7 +94,10 @@ item_limiter_excess_removed:
   message: "&eExcess %material% was removed (limit: %limit%)."
 
 spear_lunge_cooldown:
-  action_bar: "&#E94E77Spear lunge: &#FFFFFF%time%s"
+  action_bar: "&#E94E77Lunge: &#FFFFFF%time%s"
+
+lunge_cooldown:
+  action_bar: "&#E94E77Lunge: &#FFFFFF%time%s"
 
 spear_disabled:
   action_bar: "&#E94E77Spears are disabled here."

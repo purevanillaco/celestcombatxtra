@@ -671,7 +671,7 @@ public class GriefPreventionHook implements Listener {
 
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("Invalid barrier material '" + materialName + "' in config. Using BLUE_STAINED_GLASS instead.");
-            plugin.getLogger().warning("Valid materials can be found at: https://jd.papermc.io/paper/1.21.5/org/bukkit/Material.html");
+            plugin.getLogger().warning("Valid materials can be found at: https://jd.papermc.io/paper/26.2/org/bukkit/Material.html");
             return Material.BLUE_STAINED_GLASS;
         }
     }

@@ -1,5 +1,5 @@
 name: CelestCombat-Xtra
-version: '1.0.1'
+version: '1.3.0'
 main: com.shyamstudio.celestcombatXtra.CelestCombatXtra
 api-version: '1.21'
 authors: [ RaviRai, Nighter ]

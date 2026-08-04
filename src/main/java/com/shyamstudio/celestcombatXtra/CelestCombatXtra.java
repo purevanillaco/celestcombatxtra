@@ -7,6 +7,8 @@ import com.shyamstudio.celestcombatXtra.listeners.ItemLimiterListener;
 import com.shyamstudio.celestcombatXtra.listeners.SpearControlListener;
 import com.shyamstudio.celestcombatXtra.listeners.WindChargeListener;
 
+import org.bukkit.event.Listener;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -56,6 +58,7 @@ public class CelestCombatXtra extends CelestCombatPro {
 
     spearControlListener = new SpearControlListener(this, itemCooldownManager);
     getServer().getPluginManager().registerEvents(spearControlListener, this);
+    registerSpearLungePaperListener(spearControlListener);
 
     // PlaceholderAPI
     if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -67,6 +70,18 @@ public class CelestCombatXtra extends CelestCombatPro {
   /** Exposes ItemCooldownManager for PlaceholderAPI wind charge placeholders. */
   public ItemCooldownManager getItemCooldownManager() {
     return itemCooldownManager;
+  }
+
+  private void registerSpearLungePaperListener(SpearControlListener spearControl) {
+    try {
+      Class.forName("io.papermc.paper.event.entity.EntityLungeEvent");
+      Class<?> listenerClass = Class.forName(
+          "com.shyamstudio.celestcombatXtra.listeners.SpearLungePaperListener");
+      Object listener = listenerClass.getConstructor(SpearControlListener.class).newInstance(spearControl);
+      getServer().getPluginManager().registerEvents((Listener) listener, this);
+    } catch (ReflectiveOperationException ignored) {
+      // 1.21 servers without EntityLungeEvent
+    }
   }
 
   /** Exposes ItemLimiterListener for bundle/restriction checks. */
