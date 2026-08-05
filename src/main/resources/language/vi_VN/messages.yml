@@ -41,9 +41,9 @@ combat_expired:
   message: "&#4CAF50Bạn không còn trong combat."
   sound: entity.experience_orb.pickup
 
-combat_opponent_disconnected:
+combat_opponent_gone:
   enabled: true
-  message: "&#4CAF50Đối thủ của bạn đã thoát — combat đã kết thúc."
+  message: "&#4CAF50Đối thủ của bạn không còn trong trận chiến — combat đã kết thúc."
   sound: entity.experience_orb.pickup
 
 combat_fly_disabled:
