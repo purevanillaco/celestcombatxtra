@@ -68,6 +68,12 @@ combat:
   # If true, players kicked/banned by admins won't be punished (killed) for combat logging
   exempt_admin_kick: true
 
+  # If true, a combat-logging player's inventory (main storage, armor, off hand)
+  # is captured, cleared and dropped on the ground when they're punished for
+  # logging out mid-combat. If false, their inventory is left untouched (no
+  # item loss on combat-log, only the kill itself still applies).
+  drop_inventory: true
+
   # Disable flight (Creative fly) during combat
   disable_flight: false
 
@@ -528,6 +534,11 @@ husksync:
   # and re-apply it on rejoin, duplicating items already dropped on death.
   # Only takes effect if the HuskSync plugin is actually installed.
   enabled: true
+
+  # Applying the zeroed-out HuskSync snapshot on rejoin causes a second,
+  # "phantom" death with a generic "<player> died" message and no real cause.
+  # If true, that specific message is suppressed from chat/broadcast.
+  suppress_rejoin_death_message: true
 
 #---------------------------------------------------
 #              PVP TOGGLE (/pvp)

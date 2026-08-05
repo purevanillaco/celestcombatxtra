@@ -3,11 +3,15 @@ package com.shyamstudio.celestcombatXtra.combat;
 import lombok.Getter;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import com.shyamstudio.celestcombatXtra.CelestCombatPro;
 import com.shyamstudio.celestcombatXtra.Scheduler;
@@ -16,8 +20,10 @@ import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager;
 import com.shyamstudio.celestcombatXtra.hooks.husksync.HuskSyncHook;
 import com.shyamstudio.celestcombatXtra.language.ColorUtil;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -505,12 +511,73 @@ public class CombatManager {
     public void punishCombatLogout(Player player) {
         if (player == null) return;
 
-        if (huskSyncHook != null) {
-            huskSyncHook.markPendingPunishment(player);
+        boolean dropInventory = plugin.getConfig().getBoolean("combat.drop_inventory", true);
+        if (dropInventory) {
+            // Must run before setHealth(0): HuskSync's own quit-time snapshot can
+            // otherwise race with the vanilla death drop and re-apply a stale, full
+            // inventory on rejoin, duplicating whatever we drop here. Marking the
+            // player first (before we touch their inventory) lets the hook's
+            // BukkitDataSaveEvent listener zero out that snapshot regardless of timing.
+            if (huskSyncHook != null) {
+                huskSyncHook.markPendingPunishment(player);
+            }
+            dropInventoryOnLogout(player);
         }
 
         player.setHealth(0);
         removeFromCombat(player);
+    }
+
+    /**
+     * Manually captures, clears and drops a player's inventory on the ground.
+     * The vanilla death-drop triggered by {@code setHealth(0)} during
+     * {@code PlayerQuitEvent} handling is not reliable (the player entity is
+     * already mid-disconnect), so combat-log punishment takes over item
+     * disposal itself rather than relying on it.
+     */
+    private void dropInventoryOnLogout(Player player) {
+        PlayerInventory inventory = player.getInventory();
+        List<ItemStack> drops = new ArrayList<>();
+
+        ItemStack[] contents = inventory.getContents();
+        collectAndClear(contents, drops);
+        inventory.setContents(contents);
+
+        ItemStack[] armor = inventory.getArmorContents();
+        collectAndClear(armor, drops);
+        inventory.setArmorContents(armor);
+
+        ItemStack offHand = inventory.getItemInOffHand();
+        if (!isEmptyItem(offHand)) {
+            drops.add(offHand);
+        }
+        inventory.setItemInOffHand(null);
+
+        if (drops.isEmpty()) {
+            return;
+        }
+
+        Location dropLocation = player.getLocation().clone();
+        Scheduler.runLocationTaskLater(dropLocation, () -> {
+            World world = dropLocation.getWorld();
+            if (world == null) return;
+            for (ItemStack item : drops) {
+                world.dropItemNaturally(dropLocation, item);
+            }
+        }, 1L);
+    }
+
+    private void collectAndClear(ItemStack[] slots, List<ItemStack> drops) {
+        for (int i = 0; i < slots.length; i++) {
+            if (!isEmptyItem(slots[i])) {
+                drops.add(slots[i]);
+                slots[i] = null;
+            }
+        }
+    }
+
+    private boolean isEmptyItem(ItemStack item) {
+        return item == null || item.getType() == Material.AIR;
     }
 
     public void removeFromCombat(Player player) {
