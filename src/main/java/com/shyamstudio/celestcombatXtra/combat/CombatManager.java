@@ -13,6 +13,7 @@ import com.shyamstudio.celestcombatXtra.CelestCombatPro;
 import com.shyamstudio.celestcombatXtra.Scheduler;
 import com.shyamstudio.celestcombatXtra.configs.WindchargeConfigPaths;
 import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager;
+import com.shyamstudio.celestcombatXtra.hooks.husksync.HuskSyncHook;
 import com.shyamstudio.celestcombatXtra.language.ColorUtil;
 
 import java.util.HashSet;
@@ -28,6 +29,7 @@ public class CombatManager {
     @Getter private final Map<UUID, Long> playersInCombat;
     private final Map<UUID, Scheduler.Task> combatTasks;
     private final Map<UUID, UUID> combatOpponents;
+    private HuskSyncHook huskSyncHook;
 
     // Single countdown task instead of per-player tasks
     private Scheduler.Task globalCountdownTask;
@@ -496,8 +498,16 @@ public class CombatManager {
         }
     }
 
+    public void setHuskSyncHook(HuskSyncHook hook) {
+        this.huskSyncHook = hook;
+    }
+
     public void punishCombatLogout(Player player) {
         if (player == null) return;
+
+        if (huskSyncHook != null) {
+            huskSyncHook.markPendingPunishment(player);
+        }
 
         player.setHealth(0);
         removeFromCombat(player);

@@ -9,6 +9,7 @@ import com.shyamstudio.celestcombatXtra.commands.CommandManager;
 import com.shyamstudio.celestcombatXtra.commands.PvpCommand;
 import com.shyamstudio.celestcombatXtra.configs.TimeFormatter;
 import com.shyamstudio.celestcombatXtra.highlight.PvpHighlightManager;
+import com.shyamstudio.celestcombatXtra.hooks.husksync.HuskSyncHook;
 import com.shyamstudio.celestcombatXtra.hooks.protection.GriefPreventionHook;
 import com.shyamstudio.celestcombatXtra.hooks.protection.LandsHook;
 import com.shyamstudio.celestcombatXtra.hooks.protection.WorldGuardHook;
@@ -66,6 +67,7 @@ public class CelestCombatPro extends JavaPlugin {
   private WorldGuardHook worldGuardHook;
   private GriefPreventionHook griefPreventionHook;
   private LandsHook landsHook;
+  private HuskSyncHook huskSyncHook;
   private CombatAPIImpl combatAPI;
   private PvpStorage pvpStorage;
   private PvpToggleManager pvpToggleManager;
@@ -75,6 +77,7 @@ public class CelestCombatPro extends JavaPlugin {
   public static boolean hasWorldGuard = false;
   public static boolean hasGriefPrevention = false;
   public static boolean hasLands = false;
+  public static boolean hasHuskSync = false;
 
   @Override
   public void onEnable() {
@@ -152,6 +155,16 @@ public class CelestCombatPro extends JavaPlugin {
       getLogger().info("Found a supported claim plugin but claim protection is disabled in config.");
     }
 
+    // HuskSync integration - fixes an inventory-duplication exploit on combat-log kill.
+    if (hasHuskSync && getConfig().getBoolean("husksync.enabled", true)) {
+      huskSyncHook = new HuskSyncHook(this);
+      getServer().getPluginManager().registerEvents(huskSyncHook, this);
+      combatManager.setHuskSyncHook(huskSyncHook);
+      debug("HuskSync integration enabled - combat-log inventory desync fix active");
+    } else if (hasHuskSync) {
+      getLogger().info("Found HuskSync but the integration is disabled in config (husksync.enabled: false).");
+    }
+
     commandManager = new CommandManager(this);
     commandManager.registerCommands();
 
@@ -220,6 +233,10 @@ public class CelestCombatPro extends JavaPlugin {
       landsHook.cleanup();
     }
 
+    if (huskSyncHook != null) {
+      huskSyncHook.cleanup();
+    }
+
     if (killRewardManager != null) {
       killRewardManager.shutdown();
     }
@@ -260,6 +277,11 @@ public class CelestCombatPro extends JavaPlugin {
     if (hasLands) {
       getLogger().info("Lands integration enabled successfully!");
     }
+
+    hasHuskSync = isPluginEnabled("HuskSync") && isHuskSyncAPIAvailable();
+    if (hasHuskSync) {
+      getLogger().info("HuskSync integration enabled successfully!");
+    }
   }
 
   private boolean isPluginEnabled(String pluginName) {
@@ -289,6 +311,15 @@ public class CelestCombatPro extends JavaPlugin {
     try {
       Class.forName("me.angeschossen.lands.api.LandsIntegration");
       return true;
+    } catch (ClassNotFoundException | NoClassDefFoundError e) {
+      return false;
+    }
+  }
+
+  private boolean isHuskSyncAPIAvailable() {
+    try {
+      Class.forName("net.william278.husksync.event.BukkitDataSaveEvent");
+      return net.william278.husksync.api.BukkitHuskSyncAPI.getInstance() != null;
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
       return false;
     }
@@ -349,6 +380,10 @@ public class CelestCombatPro extends JavaPlugin {
 
     if (landsHook != null) {
       landsHook.cleanup();
+    }
+
+    if (huskSyncHook != null) {
+      huskSyncHook.cleanup();
     }
   }
 }

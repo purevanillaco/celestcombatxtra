@@ -31,6 +31,9 @@ repositories {
     maven { name = "codemc"; url = "https://repo.codemc.io/repository/maven-public/" }
     maven { name = "canvasmc"; url = "https://maven.canvasmc.io/releases" }
     maven { name = "incredibleplugins"; url = uri("https://repo.incredibleplugins.com/releases") }
+    // HuskSync 4.0.0 is still pre-release; the pinned build only exists in the
+    // snapshots repo (not releases) under the husksync-bukkit artifact id.
+    maven { name = "william278-snapshots"; url = "https://repo.william278.net/snapshots" }
 }
 
 configurations.all {
@@ -93,6 +96,13 @@ dependencies {
     // install the PacketEvents plugin themselves (declared as a soft-depend in
     // plugin.yml); this is compile-time only.
     compileOnly 'com.github.retrooper:packetevents-spigot:2.7.0'
+
+    // HuskSync is NOT shaded into this jar - installed as a separate server
+    // plugin (soft-depend in plugin.yml). We only read/mutate its
+    // BukkitDataSaveEvent snapshot right before it persists, to fix a
+    // combat-log inventory-duplication exploit (see hooks/husksync). Paper
+    // uses the same Bukkit-platform artifact as Spigot.
+    compileOnly 'net.william278.husksync:husksync-bukkit:4.0.0-9181943+26.2'
 
     // Canvas-only EntityTeleportAsyncEvent hook for the PVP teleport re-arm.
     // Compile-time only - only registered at runtime when Scheduler.isRunningOnCanvas().

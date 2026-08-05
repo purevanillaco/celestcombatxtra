@@ -520,6 +520,16 @@ claim_protection:
     # Add more worlds as needed
 
 #---------------------------------------------------
+#              HUSKSYNC INTEGRATION
+#---------------------------------------------------
+husksync:
+  # Fixes an inventory-duplication exploit: without this, HuskSync can
+  # persist a stale (pre-death, full) inventory snapshot on combat-log kill
+  # and re-apply it on rejoin, duplicating items already dropped on death.
+  # Only takes effect if the HuskSync plugin is actually installed.
+  enabled: true
+
+#---------------------------------------------------
 #              PVP TOGGLE (/pvp)
 #---------------------------------------------------
 pvp:
