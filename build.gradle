@@ -73,8 +73,10 @@ dependencies {
     // Per-online-player PVP state cache - relocated into plugin jar
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
 
-    // Per-viewer PVP status highlight packets - relocated into plugin jar
-    implementation 'com.github.retrooper:packetevents-spigot:2.7.0'
+    // Per-viewer PVP status highlight packets - NOT shaded. Server owners must
+    // install the PacketEvents plugin themselves (declared as a soft-depend in
+    // plugin.yml); this is compile-time only.
+    compileOnly 'com.github.retrooper:packetevents-spigot:2.7.0'
 }
 
 jar {
@@ -90,16 +92,16 @@ shadowJar {
     relocate('org.sqlite', "${project.group}.libs.sqlite")
     relocate('org.mariadb.jdbc', "${project.group}.libs.mariadb")
     relocate('com.github.benmanes.caffeine', "${project.group}.libs.caffeine")
-    relocate('io.github.retrooper.packetevents', "${project.group}.libs.packetevents")
-    relocate('com.github.retrooper.packetevents', "${project.group}.libs.packetevents")
     dependencies {
+        // compileOnly deps (paper-api, WorldGuard, PacketEvents, etc.) are already
+        // excluded from runtimeClasspath by Gradle; this just keeps the shaded jar
+        // limited to exactly the libraries we intend to bundle.
         exclude {
             it.moduleGroup != 'org.bstats'
                     && it.moduleGroup != 'com.zaxxer'
                     && it.moduleGroup != 'org.xerial'
                     && it.moduleGroup != 'org.mariadb.jdbc'
                     && it.moduleGroup != 'com.github.ben-manes.caffeine'
-                    && it.moduleGroup != 'com.github.retrooper'
         }
     }
 }

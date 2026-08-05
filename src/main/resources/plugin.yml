@@ -11,6 +11,7 @@ soft-depend:
   - PlaceholderAPI
   - Multiverse-Core
   - Worlds
+  - packetevents
 
 commands:
   celestcombat-xtra:

@@ -17,6 +17,7 @@ public class MariaDbStorage implements PvpStorage {
 
     private final CelestCombatPro plugin;
     private HikariDataSource dataSource;
+    private String tableName;
 
     public MariaDbStorage(CelestCombatPro plugin) {
         this.plugin = plugin;
@@ -24,6 +25,8 @@ public class MariaDbStorage implements PvpStorage {
 
     @Override
     public void init() {
+        tableName = PvpSchema.resolveTableName(plugin.getConfig().getString("storage.table_prefix", ""));
+
         String host = plugin.getConfig().getString("storage.mariadb.host", "localhost");
         int port = plugin.getConfig().getInt("storage.mariadb.port", 3306);
         String database = plugin.getConfig().getString("storage.mariadb.database", "celestcombat");
@@ -42,7 +45,7 @@ public class MariaDbStorage implements PvpStorage {
         dataSource = new HikariDataSource(config);
 
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(PvpSchema.CREATE_TABLE_MARIADB)) {
+             PreparedStatement statement = connection.prepareStatement(PvpSchema.createTableMariadb(tableName))) {
             statement.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to initialize MariaDB pvp_state table", e);
@@ -60,7 +63,7 @@ public class MariaDbStorage implements PvpStorage {
     public CompletableFuture<Boolean> loadPvpState(UUID uuid) {
         return Scheduler.supplyAsync(() -> {
             try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(PvpSchema.SELECT_STATE)) {
+                 PreparedStatement statement = connection.prepareStatement(PvpSchema.selectStateMariadb(tableName))) {
                 statement.setString(1, uuid.toString());
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
@@ -79,7 +82,7 @@ public class MariaDbStorage implements PvpStorage {
     public CompletableFuture<Void> savePvpState(UUID uuid, boolean enabled) {
         return Scheduler.supplyAsync(() -> {
             try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(PvpSchema.UPSERT_MARIADB)) {
+                 PreparedStatement statement = connection.prepareStatement(PvpSchema.upsertMariadb(tableName))) {
                 statement.setString(1, uuid.toString());
                 statement.setInt(2, enabled ? 1 : 0);
                 statement.setLong(3, System.currentTimeMillis());

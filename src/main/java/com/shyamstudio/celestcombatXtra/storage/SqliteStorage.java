@@ -18,6 +18,7 @@ public class SqliteStorage implements PvpStorage {
 
     private final CelestCombatPro plugin;
     private HikariDataSource dataSource;
+    private String tableName;
 
     public SqliteStorage(CelestCombatPro plugin) {
         this.plugin = plugin;
@@ -25,6 +26,8 @@ public class SqliteStorage implements PvpStorage {
 
     @Override
     public void init() {
+        tableName = PvpSchema.resolveTableName(plugin.getConfig().getString("storage.table_prefix", ""));
+
         File dataDir = new File(plugin.getDataFolder(), "data");
         if (!dataDir.exists() && !dataDir.mkdirs()) {
             plugin.getLogger().warning("Failed to create data directory: " + dataDir.getAbsolutePath());
@@ -47,7 +50,7 @@ public class SqliteStorage implements PvpStorage {
         dataSource = new HikariDataSource(config);
 
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(PvpSchema.CREATE_TABLE_SQLITE)) {
+             PreparedStatement statement = connection.prepareStatement(PvpSchema.createTableSqlite(tableName))) {
             statement.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to initialize SQLite pvp_state table", e);
@@ -65,7 +68,7 @@ public class SqliteStorage implements PvpStorage {
     public CompletableFuture<Boolean> loadPvpState(UUID uuid) {
         return Scheduler.supplyAsync(() -> {
             try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(PvpSchema.SELECT_STATE)) {
+                 PreparedStatement statement = connection.prepareStatement(PvpSchema.selectStateSqlite(tableName))) {
                 statement.setString(1, uuid.toString());
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
@@ -84,7 +87,7 @@ public class SqliteStorage implements PvpStorage {
     public CompletableFuture<Void> savePvpState(UUID uuid, boolean enabled) {
         return Scheduler.supplyAsync(() -> {
             try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(PvpSchema.UPSERT_SQLITE)) {
+                 PreparedStatement statement = connection.prepareStatement(PvpSchema.upsertSqlite(tableName))) {
                 statement.setString(1, uuid.toString());
                 statement.setInt(2, enabled ? 1 : 0);
                 statement.setLong(3, System.currentTimeMillis());

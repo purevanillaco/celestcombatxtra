@@ -1,39 +1,78 @@
 package com.shyamstudio.celestcombatXtra.storage;
 
 /**
- * Table/column names and per-dialect SQL for the pvp_state table.
+ * Table name resolution (with configurable prefix) and per-dialect SQL for the
+ * pvp state table.
+ *
+ * Table identifiers can't be bound as PreparedStatement parameters, so the
+ * configured prefix is sanitized down to a safe identifier charset before being
+ * concatenated into SQL - this both prevents SQL injection via a malicious/broken
+ * config value and normalizes admin-friendly inputs like a server name ("hello-world",
+ * "hello world") into a valid, readable table name ("hello_world_pvp_state").
  */
 final class PvpSchema {
     private PvpSchema() {}
 
-    static final String TABLE = "pvp_state";
+    private static final String BASE_TABLE = "pvp_state";
 
-    static final String CREATE_TABLE_SQLITE = """
-            CREATE TABLE IF NOT EXISTS pvp_state (
-                player_uuid TEXT PRIMARY KEY,
-                pvp_enabled INTEGER NOT NULL,
-                updated_at BIGINT NOT NULL
-            )
-            """;
+    /**
+     * Resolves the configured prefix into a safe table name.
+     * Any run of characters outside [a-zA-Z0-9_] is collapsed to a single
+     * underscore, leading/trailing underscores are trimmed, and (if non-empty)
+     * a single trailing underscore is (re-)appended as the separator before
+     * "pvp_state". A blank/empty prefix results in no prefix at all.
+     *
+     * Examples: "hello-world" -> "hello_world_pvp_state"
+     *           "hello_world" -> "hello_world_pvp_state"
+     *           "hello_world_" -> "hello_world_pvp_state"
+     *           ""  / null    -> "pvp_state"
+     */
+    static String resolveTableName(String configuredPrefix) {
+        if (configuredPrefix == null || configuredPrefix.isBlank()) {
+            return BASE_TABLE;
+        }
 
-    static final String CREATE_TABLE_MARIADB = """
-            CREATE TABLE IF NOT EXISTS pvp_state (
-                player_uuid VARCHAR(36) PRIMARY KEY,
-                pvp_enabled TINYINT(1) NOT NULL,
-                updated_at BIGINT NOT NULL
-            )
-            """;
+        String sanitized = configuredPrefix.replaceAll("[^a-zA-Z0-9_]+", "_");
+        sanitized = sanitized.replaceAll("^_+", "").replaceAll("_+$", "");
 
-    static final String SELECT_STATE =
-            "SELECT pvp_enabled FROM pvp_state WHERE player_uuid = ?";
+        if (sanitized.isEmpty()) {
+            return BASE_TABLE;
+        }
 
-    static final String UPSERT_SQLITE = """
-            INSERT INTO pvp_state (player_uuid, pvp_enabled, updated_at) VALUES (?, ?, ?)
-            ON CONFLICT(player_uuid) DO UPDATE SET pvp_enabled = excluded.pvp_enabled, updated_at = excluded.updated_at
-            """;
+        return sanitized + "_" + BASE_TABLE;
+    }
 
-    static final String UPSERT_MARIADB = """
-            INSERT INTO pvp_state (player_uuid, pvp_enabled, updated_at) VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE pvp_enabled = VALUES(pvp_enabled), updated_at = VALUES(updated_at)
-            """;
+    static String createTableSqlite(String tableName) {
+        return "CREATE TABLE IF NOT EXISTS \"" + tableName + "\" (\n"
+                + "    player_uuid TEXT PRIMARY KEY,\n"
+                + "    pvp_enabled INTEGER NOT NULL,\n"
+                + "    updated_at BIGINT NOT NULL\n"
+                + ")";
+    }
+
+    static String createTableMariadb(String tableName) {
+        return "CREATE TABLE IF NOT EXISTS `" + tableName + "` (\n"
+                + "    player_uuid VARCHAR(36) PRIMARY KEY,\n"
+                + "    pvp_enabled TINYINT(1) NOT NULL,\n"
+                + "    updated_at BIGINT NOT NULL\n"
+                + ")";
+    }
+
+    static String selectStateSqlite(String tableName) {
+        return "SELECT pvp_enabled FROM \"" + tableName + "\" WHERE player_uuid = ?";
+    }
+
+    static String selectStateMariadb(String tableName) {
+        return "SELECT pvp_enabled FROM `" + tableName + "` WHERE player_uuid = ?";
+    }
+
+    static String upsertSqlite(String tableName) {
+        return "INSERT INTO \"" + tableName + "\" (player_uuid, pvp_enabled, updated_at) VALUES (?, ?, ?)\n"
+                + "ON CONFLICT(player_uuid) DO UPDATE SET pvp_enabled = excluded.pvp_enabled, updated_at = excluded.updated_at";
+    }
+
+    static String upsertMariadb(String tableName) {
+        return "INSERT INTO `" + tableName + "` (player_uuid, pvp_enabled, updated_at) VALUES (?, ?, ?)\n"
+                + "ON DUPLICATE KEY UPDATE pvp_enabled = VALUES(pvp_enabled), updated_at = VALUES(updated_at)";
+    }
 }

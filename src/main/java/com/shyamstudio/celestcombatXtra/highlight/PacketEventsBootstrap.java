@@ -1,68 +1,47 @@
 package com.shyamstudio.celestcombatXtra.highlight;
 
 import com.github.retrooper.packetevents.PacketEvents;
-import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
- * PacketEvents is shaded into this plugin's jar (relocated), but bootstrapping it
- * can still fail on some environments (e.g. an unsupported protocol version, an
- * incompatible server fork). PacketEvents is only required for the PVP status
- * highlight (glow) feature - if it fails to load/initialize, we simply skip that
- * feature instead of failing the whole plugin. Everything else (toggle, warmups,
- * damage gating, teleport re-arm) works without it.
+ * PacketEvents is NOT shaded into this jar - it must be installed as a separate
+ * server plugin (declared as a soft-depend in plugin.yml so it loads before us).
+ * It bootstraps its own PacketEventsAPI instance in its own onLoad/onEnable; we
+ * only ever read {@link PacketEvents#getAPI()}, never call setAPI/load/init/terminate
+ * ourselves. PacketEvents is required only for the PVP status highlight (glow)
+ * feature - if it isn't installed (or isn't initialized), that feature is silently
+ * skipped and everything else in the plugin works normally.
  */
 public final class PacketEventsBootstrap {
-    private static boolean loaded = false;
     private static boolean available = false;
 
     private PacketEventsBootstrap() {}
 
-    /** Call from JavaPlugin#onLoad(). */
-    public static void tryLoad(JavaPlugin plugin) {
+    /** Call once from JavaPlugin#onEnable(), after soft-deps have loaded. */
+    public static void detect(JavaPlugin plugin) {
         try {
-            PacketEvents.setAPI(SpigotPacketEventsBuilder.build(plugin));
-            PacketEvents.getAPI().getSettings().checkForUpdates(false).bStats(false);
-            PacketEvents.getAPI().load();
-            loaded = true;
+            if (!Bukkit.getPluginManager().isPluginEnabled("packetevents")) {
+                available = false;
+                plugin.getLogger().info("PacketEvents plugin not found - the PVP status highlight "
+                        + "feature is disabled. Install PacketEvents to enable it; everything else "
+                        + "(toggle, warmups, damage gating) works normally without it.");
+                return;
+            }
+
+            available = PacketEvents.getAPI() != null && PacketEvents.getAPI().isInitialized();
+            if (!available) {
+                plugin.getLogger().warning("PacketEvents is installed but not initialized yet - "
+                        + "the PVP status highlight feature is disabled.");
+            }
         } catch (Throwable t) {
-            loaded = false;
-            plugin.getLogger().warning("PacketEvents failed to load - the PVP status highlight "
+            available = false;
+            plugin.getLogger().warning("Failed to detect PacketEvents - the PVP status highlight "
                     + "feature will be disabled, everything else works normally. Cause: " + t);
         }
     }
 
-    /** Call from JavaPlugin#onEnable(), before constructing PvpHighlightManager. */
-    public static void tryInit(JavaPlugin plugin) {
-        if (!loaded) {
-            return;
-        }
-        try {
-            PacketEvents.getAPI().init();
-            available = true;
-        } catch (Throwable t) {
-            available = false;
-            plugin.getLogger().warning("PacketEvents failed to initialize - the PVP status highlight "
-                    + "feature will be disabled, everything else works normally. Cause: " + t);
-        }
-    }
-
-    /** Call from JavaPlugin#onDisable(), after all managers using it have shut down. */
-    public static void tryTerminate() {
-        if (!available) {
-            return;
-        }
-        try {
-            PacketEvents.getAPI().terminate();
-        } catch (Throwable ignored) {
-            // best-effort on shutdown
-        } finally {
-            available = false;
-            loaded = false;
-        }
-    }
-
-    /** True only once PacketEvents has loaded and initialized successfully. */
+    /** True only when PacketEvents is installed, enabled, and initialized. */
     public static boolean isAvailable() {
         return available;
     }

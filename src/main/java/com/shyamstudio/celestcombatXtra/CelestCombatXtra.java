@@ -25,17 +25,12 @@ public class CelestCombatXtra extends CelestCombatPro {
   private SpearControlListener spearControlListener;
 
   @Override
-  public void onLoad() {
-    // PacketEvents is only required for the PVP status highlight (glow) feature.
-    // If it fails to load, PacketEventsBootstrap.isAvailable() stays false and
-    // CelestCombatPro simply skips constructing the highlight manager - the rest
-    // of the plugin (toggle, warmups, damage gating) is unaffected.
-    PacketEventsBootstrap.tryLoad(this);
-  }
-
-  @Override
   public void onEnable() {
-    PacketEventsBootstrap.tryInit(this);
+    // PacketEvents is only required for the PVP status highlight (glow) feature,
+    // and must be installed by the server owner as a separate plugin (soft-depend,
+    // not shaded). If it's absent, CelestCombatPro simply skips constructing the
+    // highlight manager - the rest of the plugin is unaffected.
+    PacketEventsBootstrap.detect(this);
 
     // Base plugin registration (existing combat logic, ender pearl, trident, etc.)
     super.onEnable();
@@ -137,7 +132,5 @@ public class CelestCombatXtra extends CelestCombatPro {
     }
 
     super.onDisable();
-
-    PacketEventsBootstrap.tryTerminate();
   }
 }
