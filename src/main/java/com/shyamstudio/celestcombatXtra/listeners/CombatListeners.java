@@ -453,7 +453,7 @@ public class CombatListeners implements Listener {
             playerLoggedOutInCombat.put(player.getUniqueId(), true);
 
             // End combat for any opponent whose remaining opponents are now all offline
-            CelestCombatAPI.getCombatAPI().handlePlayerDisconnect(player);
+            CelestCombatAPI.getCombatAPI().handlePlayerCombatExit(player);
 
             // Punish the player for combat logging using API
             CelestCombatAPI.getCombatAPI().punishCombatLogout(player);
@@ -476,7 +476,7 @@ public class CombatListeners implements Listener {
             if (plugin.getConfig().getBoolean("combat.exempt_admin_kick", true)) {
 
                 // Don't punish, just remove from combat
-                CelestCombatAPI.getCombatAPI().handlePlayerDisconnect(player);
+                CelestCombatAPI.getCombatAPI().handlePlayerCombatExit(player);
                 CelestCombatAPI.getCombatAPI().removeFromCombatSilently(player);
             } else {
                 // Regular kick, treat as combat logout
@@ -484,7 +484,7 @@ public class CombatListeners implements Listener {
                 playerLoggedOutInCombat.put(player.getUniqueId(), true);
 
                 // End combat for any opponent whose remaining opponents are now all offline
-                CelestCombatAPI.getCombatAPI().handlePlayerDisconnect(player);
+                CelestCombatAPI.getCombatAPI().handlePlayerCombatExit(player);
 
                 // Punish for combat logging
                 CelestCombatAPI.getCombatAPI().punishCombatLogout(player);
@@ -555,11 +555,13 @@ public class CombatListeners implements Listener {
                 deathAnimationManager.performDeathAnimation(victim, null);
             }
 
+            // End combat for every tracked opponent (not just the last attacker) whose
+            // fights with the victim are now fully resolved, e.g. a group fight where
+            // the victim was the only remaining opponent for one of the attackers.
+            CelestCombatAPI.getCombatAPI().handlePlayerCombatExit(victim);
+
             // Clean up combat state
             CelestCombatAPI.getCombatAPI().removeFromCombat(victim);
-            if (opponent != null) {
-                CelestCombatAPI.getCombatAPI().removeFromCombat(opponent);
-            }
 
             // Clean up damage tracking
             lastDamageSource.remove(victimId);

@@ -45,9 +45,9 @@ combat_expired:
   message: "&#4CAF50You are no longer in combat."
   sound: entity.experience_orb.pickup
 
-combat_opponent_disconnected:
+combat_opponent_gone:
   enabled: true
-  message: "&#4CAF50Your opponent disconnected — combat has ended."
+  message: "&#4CAF50Your opponent is no longer in the fight — combat has ended."
   sound: entity.experience_orb.pickup
 
 combat_fly_disabled:

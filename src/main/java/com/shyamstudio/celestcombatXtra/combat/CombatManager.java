@@ -654,11 +654,15 @@ public class CombatManager {
     }
 
     /**
-     * Called when a player disconnects (quit or kick) while in combat. Ends combat
-     * immediately for any opponent whose tracked opponents are now all offline,
-     * instead of leaving them tagged until the full duration times out.
+     * Called whenever a player permanently leaves combat outside the normal timeout
+     * path — disconnecting (quit/kick) or dying to something other than a tracked
+     * opponent. Walks every opponent still grouped against {@code player} and, for
+     * each one, drops {@code player} from that opponent's remaining-opponents group;
+     * if that leaves the opponent with no other online opponent, their combat ends
+     * immediately instead of ticking down to the full duration. Opponents who still
+     * have another online opponent (group fights) are left untouched.
      */
-    public Set<UUID> handlePlayerDisconnect(Player player) {
+    public Set<UUID> handlePlayerCombatExit(Player player) {
         if (player == null) return Collections.emptySet();
 
         UUID playerUUID = player.getUniqueId();
@@ -677,7 +681,7 @@ public class CombatManager {
             if (opponent == null || !opponent.isOnline()) continue;
 
             if (isInCombat(opponent) && allRemainingOpponentsOffline(oppId)) {
-                removeFromCombat(opponent, "combat_opponent_disconnected");
+                removeFromCombat(opponent, "combat_opponent_gone");
                 autoRemovedOpponents.add(oppId);
             }
         }

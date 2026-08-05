@@ -71,10 +71,10 @@ public class CombatAPIImpl implements CombatAPI {
     }
     
     @Override
-    public void handlePlayerDisconnect(Player player) {
+    public void handlePlayerCombatExit(Player player) {
         if (player == null) return;
 
-        Set<UUID> autoRemovedOpponents = combatManager.handlePlayerDisconnect(player);
+        Set<UUID> autoRemovedOpponents = combatManager.handlePlayerCombatExit(player);
         for (UUID opponentUuid : autoRemovedOpponents) {
             Player opponent = Bukkit.getPlayer(opponentUuid);
             if (opponent == null) continue;
