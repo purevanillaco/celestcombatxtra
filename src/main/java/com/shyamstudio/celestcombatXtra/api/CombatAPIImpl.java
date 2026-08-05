@@ -8,6 +8,7 @@ import com.shyamstudio.celestcombatXtra.api.events.*;
 import com.shyamstudio.celestcombatXtra.combat.CombatManager;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class CombatAPIImpl implements CombatAPI {
@@ -69,6 +70,21 @@ public class CombatAPIImpl implements CombatAPI {
         Bukkit.getPluginManager().callEvent(combatEndEvent);
     }
     
+    @Override
+    public void handlePlayerDisconnect(Player player) {
+        if (player == null) return;
+
+        Set<UUID> autoRemovedOpponents = combatManager.handlePlayerDisconnect(player);
+        for (UUID opponentUuid : autoRemovedOpponents) {
+            Player opponent = Bukkit.getPlayer(opponentUuid);
+            if (opponent == null) continue;
+
+            CombatEndEvent combatEndEvent = new CombatEndEvent(
+                    opponent, player, CombatEndEvent.CombatEndReason.EXPIRED, 0);
+            Bukkit.getPluginManager().callEvent(combatEndEvent);
+        }
+    }
+
     @Override
     public Player getCombatOpponent(Player player) {
         return combatManager.getCombatOpponent(player);

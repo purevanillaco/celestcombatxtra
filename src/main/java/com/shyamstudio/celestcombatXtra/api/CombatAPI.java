@@ -16,7 +16,15 @@ public interface CombatAPI {
     void removeFromCombat(Player player);
     
     void removeFromCombatSilently(Player player);
-    
+
+    /**
+     * Ends combat immediately for any opponent of {@code player} whose remaining
+     * tracked opponents are now all offline, instead of leaving them tagged until
+     * the full combat duration times out. Call when {@code player} disconnects
+     * (quit or kick) while still in combat.
+     */
+    void handlePlayerDisconnect(Player player);
+
     Player getCombatOpponent(Player player);
     
     int getRemainingCombatTime(Player player);

@@ -452,6 +452,9 @@ public class CombatListeners implements Listener {
         if (CelestCombatAPI.getCombatAPI().isInCombat(player)) {
             playerLoggedOutInCombat.put(player.getUniqueId(), true);
 
+            // End combat for any opponent whose remaining opponents are now all offline
+            CelestCombatAPI.getCombatAPI().handlePlayerDisconnect(player);
+
             // Punish the player for combat logging using API
             CelestCombatAPI.getCombatAPI().punishCombatLogout(player);
 
@@ -473,16 +476,15 @@ public class CombatListeners implements Listener {
             if (plugin.getConfig().getBoolean("combat.exempt_admin_kick", true)) {
 
                 // Don't punish, just remove from combat
-                Player opponent = CelestCombatAPI.getCombatAPI().getCombatOpponent(player);
+                CelestCombatAPI.getCombatAPI().handlePlayerDisconnect(player);
                 CelestCombatAPI.getCombatAPI().removeFromCombatSilently(player);
-
-                if (opponent != null) {
-                    CelestCombatAPI.getCombatAPI().removeFromCombat(opponent);
-                }
             } else {
                 // Regular kick, treat as combat logout
                 Player opponent = CelestCombatAPI.getCombatAPI().getCombatOpponent(player);
                 playerLoggedOutInCombat.put(player.getUniqueId(), true);
+
+                // End combat for any opponent whose remaining opponents are now all offline
+                CelestCombatAPI.getCombatAPI().handlePlayerDisconnect(player);
 
                 // Punish for combat logging
                 CelestCombatAPI.getCombatAPI().punishCombatLogout(player);
@@ -495,9 +497,6 @@ public class CombatListeners implements Listener {
                 }
 
                 CelestCombatAPI.getCombatAPI().removeFromCombatSilently(player);
-                if (opponent != null) {
-                    CelestCombatAPI.getCombatAPI().removeFromCombat(opponent);
-                }
             }
         }
     }
