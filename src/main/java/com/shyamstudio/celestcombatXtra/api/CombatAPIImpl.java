@@ -260,8 +260,11 @@ public class CombatAPIImpl implements CombatAPI {
 
     @Override
     public boolean isPvpEnabled(Player player) {
-        if (player == null || plugin.getPvpToggleManager() == null) {
+        if (player == null) {
             return false;
+        }
+        if (plugin.getPvpToggleManager() == null) {
+            return true; // feature disabled -> PvP is unrestricted
         }
         return plugin.getPvpToggleManager().isEffectivelyPvpEnabled(player);
     }

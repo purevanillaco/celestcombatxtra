@@ -169,29 +169,34 @@ public class CelestCombatPro extends JavaPlugin {
     commandManager.registerCommands();
 
     // PVP toggle feature
-    pvpStorage = StorageFactory.create(this);
-    pvpToggleManager = new PvpToggleManager(this, pvpStorage);
-    pvpToggleListener = new PvpToggleListener(this);
-    getServer().getPluginManager().registerEvents(pvpToggleListener, this);
-    if (Scheduler.isRunningOnCanvas()) {
-      try {
-        getServer().getPluginManager().registerEvents(
-            new com.shyamstudio.celestcombatXtra.listeners.CanvasTeleportListener(this), this);
-        getLogger().info("Canvas detected - registered EntityTeleportAsyncEvent listener for PVP re-arm.");
-      } catch (Throwable t) {
-        getLogger().warning("Canvas detected but failed to register the async teleport listener - "
-            + "falling back to PlayerTeleportEvent only for PVP re-arm. Cause: " + t);
+    if (getConfig().getBoolean("pvp.enabled", true)) {
+      pvpStorage = StorageFactory.create(this);
+      pvpToggleManager = new PvpToggleManager(this, pvpStorage);
+      pvpToggleListener = new PvpToggleListener(this);
+      getServer().getPluginManager().registerEvents(pvpToggleListener, this);
+      if (Scheduler.isRunningOnCanvas()) {
+        try {
+          getServer().getPluginManager().registerEvents(
+              new com.shyamstudio.celestcombatXtra.listeners.CanvasTeleportListener(this), this);
+          getLogger().info("Canvas detected - registered EntityTeleportAsyncEvent listener for PVP re-arm.");
+        } catch (Throwable t) {
+          getLogger().warning("Canvas detected but failed to register the async teleport listener - "
+              + "falling back to PlayerTeleportEvent only for PVP re-arm. Cause: " + t);
+        }
       }
-    }
-    if (getCommand("pvp") != null) {
-      getCommand("pvp").setExecutor(new PvpCommand(this));
-    }
-    if (com.shyamstudio.celestcombatXtra.highlight.PacketEventsBootstrap.isAvailable()) {
-      pvpHighlightManager = new PvpHighlightManager(this, pvpToggleManager);
-      pvpHighlightManager.start();
+      if (getCommand("pvp") != null) {
+        getCommand("pvp").setExecutor(new PvpCommand(this));
+      }
+      if (com.shyamstudio.celestcombatXtra.highlight.PacketEventsBootstrap.isAvailable()) {
+        pvpHighlightManager = new PvpHighlightManager(this, pvpToggleManager);
+        pvpHighlightManager.start();
+      } else {
+        getLogger().info("PacketEvents is not available - the PVP status highlight (glow) "
+            + "feature is disabled. PVP toggling, warmups, and damage gating are unaffected.");
+      }
     } else {
-      getLogger().info("PacketEvents is not available - the PVP status highlight (glow) "
-          + "feature is disabled. PVP toggling, warmups, and damage gating are unaffected.");
+      getLogger().info("PVP toggling is disabled in config (pvp.enabled: false) - /pvp, the status "
+          + "highlight, and the toggle-state database are all inactive. PVP damage is unrestricted.");
     }
 
     combatAPI = new CombatAPIImpl(this, combatManager);

@@ -544,6 +544,11 @@ husksync:
 #              PVP TOGGLE (/pvp)
 #---------------------------------------------------
 pvp:
+  # Master switch for the /pvp toggle feature. When false, /pvp toggling,
+  # the status glow highlight, and the toggle-state database are all disabled
+  # entirely (nothing is stored, since there is no toggle status to persist).
+  enabled: true
+
   # Effective PVP state used when a player has never run /pvp (no database row yet)
   default_status: true
 

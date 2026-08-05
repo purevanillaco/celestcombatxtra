@@ -529,8 +529,12 @@ public class CombatListeners implements Listener {
                 CelestCombatAPI.getCombatAPI().removeFromCombat(killer);
             }
         }
-        // If player died by other causes but was in combat
-        else if (CelestCombatAPI.getCombatAPI().isInCombat(victim)) {
+        // If player died by other causes but was in combat.
+        // Deliberately checked via raw map membership rather than isInCombat(victim):
+        // isInCombat() self-expires (and prunes the opponent group) as a side effect
+        // when the timer has just lapsed, which would silently drop us into the
+        // "died outside of combat" branch below and skip ending the opponent's combat.
+        else if (CelestCombatAPI.getCombatAPI().getPlayersInCombat().containsKey(victimId)) {
             Player opponent = CelestCombatAPI.getCombatAPI().getCombatOpponent(victim);
 
             // Check if we have an opponent or a recent damage source
