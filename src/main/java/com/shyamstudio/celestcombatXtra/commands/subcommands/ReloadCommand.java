@@ -45,6 +45,10 @@ public class ReloadCommand extends BaseCommand {
         plugin.getNewbieProtectionManager().reloadConfig();
         plugin.getCombatListeners().reload();
 
+        if (plugin.getPvpHighlightManager() != null) {
+            plugin.getPvpHighlightManager().restart();
+        }
+
         if (plugin instanceof CelestCombatXtra xtra) {
             List<String> skippedReserved = xtra.reloadPhase1Listeners();
             if (!skippedReserved.isEmpty()) {

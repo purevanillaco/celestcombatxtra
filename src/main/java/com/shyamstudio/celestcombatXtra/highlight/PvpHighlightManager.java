@@ -54,8 +54,19 @@ public class PvpHighlightManager {
     }
 
     public void start() {
-        long interval = Math.max(1L, plugin.getTimeFromConfig("pvp.status_highlight.flash_interval", "10t"));
+        // flash_interval is a raw tick count (a plain number), not a duration string -
+        // TimeFormatter only understands s/m/h/d/w/mo/y suffixes, not "t".
+        long interval = Math.max(1L, plugin.getTimeFromConfig("pvp.status_highlight.flash_interval", "10"));
         task = Scheduler.runTaskTimer(this::tick, interval, interval);
+    }
+
+    /** Re-reads flash_interval from config and restarts the tick task. Call on /reload. */
+    public void restart() {
+        if (task != null) {
+            task.cancel();
+        }
+        clearAllVisiblePairs();
+        start();
     }
 
     private boolean isEnabled() {
