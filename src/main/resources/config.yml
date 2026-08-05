@@ -556,6 +556,14 @@ storage:
   # sqlite (default, zero-config, file-based) or mariadb
   type: sqlite
 
+  # Optional prefix for the pvp state table, useful when sharing one database
+  # across multiple servers/plugins (e.g. MariaDB). Only letters, numbers and
+  # underscores are kept - anything else (spaces, dashes, etc.) is normalized to
+  # an underscore, so "hello-world" and "hello world" both become "hello_world".
+  # Leave blank for no prefix. Final table name: <prefix>_pvp_state (or just
+  # "pvp_state" if left blank).
+  table_prefix: ""
+
   sqlite:
     file: "data/pvp.db"
     # SQLite is single-writer - keep this at 1 to avoid SQLITE_BUSY lock contention
