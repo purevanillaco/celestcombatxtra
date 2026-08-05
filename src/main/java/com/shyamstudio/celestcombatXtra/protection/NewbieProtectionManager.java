@@ -314,12 +314,20 @@ public class NewbieProtectionManager {
      * Handles when a protected player takes damage
      */
     public boolean handleDamageReceived(Player player, Player attacker) {
+        return handleDamageReceived(player, attacker, true);
+    }
+
+    /**
+     * Handles protected-player damage while allowing the caller to suppress
+     * repeated attacker feedback without changing the protection result.
+     */
+    public boolean handleDamageReceived(Player player, Player attacker, boolean sendAttackerMessage) {
         if (!hasProtection(player)) {
             return false; // Player is not protected
         }
 
         // Send message to attacker if they're a player
-        if (attacker != null && attacker != player) {
+        if (sendAttackerMessage && attacker != null && attacker != player) {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("player", player.getName());
             placeholders.put("attacker", attacker.getName());

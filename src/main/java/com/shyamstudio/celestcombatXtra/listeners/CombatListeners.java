@@ -41,7 +41,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 public class CombatListeners implements Listener {
     private static final long EXPLOSION_TAG_MS = 3500L;
@@ -61,6 +65,7 @@ public class CombatListeners implements Listener {
     }
 
     private record ExplosionTag(Location center, long timeMs, ExplosionKind kind) {}
+    private record PvpDenialKey(UUID attackerId, UUID victimId) {}
 
     private final CelestCombatPro plugin;
     private CombatManager combatManager;
@@ -77,6 +82,9 @@ public class CombatListeners implements Listener {
     private final Map<UUID, UUID> crystalLastHit = new ConcurrentHashMap<>();
     private final Map<UUID, Long> crystalHitTime = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<ExplosionTag> recentExplosions = new CopyOnWriteArrayList<>();
+    private final Cache<PvpDenialKey, Boolean> pvpDenialMessageCooldowns = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofSeconds(10))
+            .build();
     // Cleanup threshold (5 minutes)
     private static final long DAMAGE_RECORD_CLEANUP_THRESHOLD = TimeUnit.MINUTES.toMillis(5);
 
@@ -180,7 +188,8 @@ public class CombatListeners implements Listener {
 
         if (newbieProtectionManager.shouldProtectFromPvP()
                 && newbieProtectionManager.hasProtection(victim)) {
-            boolean shouldBlock = newbieProtectionManager.handleDamageReceived(victim, attacker);
+            boolean shouldBlock = newbieProtectionManager.handleDamageReceived(
+                    victim, attacker, shouldSendPvpDenialMessage(attacker, victim));
             if (shouldBlock) {
                 event.setCancelled(true);
                 plugin.debug("Blocked explosion PvP damage to protected newbie: " + victim.getName());
@@ -342,6 +351,10 @@ public class CombatListeners implements Listener {
         }
 
         event.setCancelled(true);
+        if (!shouldSendPvpDenialMessage(attacker, victim)) {
+            return true;
+        }
+
         Map<String, String> placeholders = new HashMap<>();
         if (attackerOff) {
             messageService.sendMessage(attacker, "pvp_attacker_pvp_disabled", placeholders);
@@ -350,6 +363,16 @@ public class CombatListeners implements Listener {
             messageService.sendMessage(attacker, "pvp_victim_pvp_disabled", placeholders);
         }
         return true;
+    }
+
+    /**
+     * Returns whether a blocked PvP attempt should show feedback. Damage remains
+     * blocked regardless; this only suppresses repeated chat messages for the
+     * same attacker-target pair during the ten-second cooldown.
+     */
+    private boolean shouldSendPvpDenialMessage(Player attacker, Player victim) {
+        PvpDenialKey key = new PvpDenialKey(attacker.getUniqueId(), victim.getUniqueId());
+        return pvpDenialMessageCooldowns.asMap().putIfAbsent(key, Boolean.TRUE) == null;
     }
 
     private void cleanupStaleCrystalHits() {
@@ -391,7 +414,8 @@ public class CombatListeners implements Listener {
                 newbieProtectionManager.hasProtection(victim)) {
 
             // Handle the protection (sends messages and potentially removes protection)
-            boolean shouldBlock = newbieProtectionManager.handleDamageReceived(victim, attacker);
+            boolean shouldBlock = newbieProtectionManager.handleDamageReceived(
+                    victim, attacker, shouldSendPvpDenialMessage(attacker, victim));
             if (shouldBlock) {
                 event.setCancelled(true);
                 plugin.debug("Blocked PvP damage to protected newbie: " + victim.getName());
@@ -520,6 +544,12 @@ public class CombatListeners implements Listener {
 
             // Perform death animation
             deathAnimationManager.performDeathAnimation(victim, killer);
+
+            // Reconcile every tracked opponent before the victim's combat group
+            // is pruned. The final hit refreshes the killer's timer, so removing
+            // the victim first would otherwise leave a lone killer tagged until
+            // that new timer expires.
+            CelestCombatAPI.getCombatAPI().handlePlayerCombatExit(victim);
 
             // Always remove victim from combat
             CelestCombatAPI.getCombatAPI().removeFromCombat(victim);
