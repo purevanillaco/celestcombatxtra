@@ -34,11 +34,9 @@ import com.shyamstudio.celestcombatXtra.updates.LanguageUpdater;
 import com.shyamstudio.celestcombatXtra.updates.UpdateChecker;
 import com.sk89q.worldguard.WorldGuard;
 
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.BaseComponent;
+import net.kyori.adventure.text.Component;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -369,9 +367,9 @@ public class CelestCombatPro extends JavaPlugin {
     return getConfig().getBoolean("disable_actionbar", false);
   }
 
-  public void sendActionBar(Player player, BaseComponent... components) {
+  public void sendActionBar(Player player, Component component) {
     if (isActionBarDisabled() || player == null) return;
-    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, components);
+    player.sendActionBar(component);
   }
 
   public void reload() {
