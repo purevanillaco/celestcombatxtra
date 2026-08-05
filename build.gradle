@@ -7,7 +7,7 @@ plugins {
 import org.gradle.api.attributes.java.TargetJvmVersion
 
 group = 'com.shyamstudio'
-version = '1.4.0'
+version = '1.5.0'
 
 repositories {
     mavenCentral()
@@ -30,6 +30,7 @@ repositories {
     maven { name = "jitpack"; url = "https://jitpack.io" }
     maven { name = "codemc"; url = "https://repo.codemc.io/repository/maven-public/" }
     maven { name = "canvasmc"; url = "https://maven.canvasmc.io/releases" }
+    maven { name = "incredibleplugins"; url = uri("https://repo.incredibleplugins.com/releases") }
 }
 
 configurations.all {
@@ -69,6 +70,10 @@ dependencies {
     }
     
     compileOnly 'com.github.GriefPrevention:GriefPrevention:17.0.0'
+    // Second claim-system backend for claim_protection (see claim_protection.backend
+    // in config.yml). compileOnly like the other soft-depend integrations above -
+    // not shaded, server owners install the Lands plugin themselves.
+    compileOnly 'com.incredibleplugins:lands-api:7.28.1'
     compileOnly 'me.clip:placeholderapi:2.11.6'
 
     // bStats metrics - relocated into plugin jar to avoid conflicts

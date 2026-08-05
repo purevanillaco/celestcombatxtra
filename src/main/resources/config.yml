@@ -471,12 +471,17 @@ safezone_protection:
     # Add more worlds as needed
 
 #---------------------------------------------------
-#            GRIEFPREVENTION INTEGRATION
+#              CLAIM SYSTEM INTEGRATION
 #---------------------------------------------------
 claim_protection:
-  # Enable/disable GriefPrevention integration for claim barriers
+  # Enable/disable claim-system integration for claim barriers
   # This will prevent players in combat from entering protected claims
   enabled: false
+
+  # Which claim plugin backs this feature: "auto", "griefprevention", or "lands".
+  # "auto" uses whichever supported plugin is installed (GriefPrevention preferred
+  # if both are present). Only one backend is ever active at a time.
+  backend: auto
 
   # Block type for the barrier around protected claims
   # Set "BARRIER" for invisible but solid barrier
@@ -493,7 +498,9 @@ claim_protection:
   # Higher values = stronger push back, lower values = gentler push
   push_back_force: 0.6
 
-  # Player claim's permission to bypass claim barriers (player can enter claims while in combat)
+  # GriefPrevention-only: player claim's permission to bypass claim barriers
+  # (player can enter claims while in combat). Not used by the Lands backend,
+  # which always checks Lands' own "can enter" permission for the claim instead.
   # EDIT - Can edit claims settings for admins (not recommended for regular players)
   # MANAGE - Can manage claim settings (most restrictive)
   # BUILD - Can place/break blocks in the claim (default, good balance)

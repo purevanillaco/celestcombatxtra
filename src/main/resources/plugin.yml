@@ -1,5 +1,5 @@
 name: CelestCombat-Xtra
-version: '1.4.0'
+version: '1.5.0'
 main: com.shyamstudio.celestcombatXtra.CelestCombatXtra
 api-version: '1.21'
 authors: [ RaviRai, Nighter ]
@@ -13,6 +13,7 @@ soft-depend:
   - Multiverse-Core
   - Worlds
   - packetevents
+  - Lands
 
 commands:
   celestcombat-xtra:

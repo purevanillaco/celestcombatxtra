@@ -10,6 +10,7 @@ import com.shyamstudio.celestcombatXtra.commands.PvpCommand;
 import com.shyamstudio.celestcombatXtra.configs.TimeFormatter;
 import com.shyamstudio.celestcombatXtra.highlight.PvpHighlightManager;
 import com.shyamstudio.celestcombatXtra.hooks.protection.GriefPreventionHook;
+import com.shyamstudio.celestcombatXtra.hooks.protection.LandsHook;
 import com.shyamstudio.celestcombatXtra.hooks.protection.WorldGuardHook;
 import com.shyamstudio.celestcombatXtra.language.LanguageManager;
 import com.shyamstudio.celestcombatXtra.language.MessageService;
@@ -64,6 +65,7 @@ public class CelestCombatPro extends JavaPlugin {
   private NewbieProtectionManager newbieProtectionManager;
   private WorldGuardHook worldGuardHook;
   private GriefPreventionHook griefPreventionHook;
+  private LandsHook landsHook;
   private CombatAPIImpl combatAPI;
   private PvpStorage pvpStorage;
   private PvpToggleManager pvpToggleManager;
@@ -72,6 +74,7 @@ public class CelestCombatPro extends JavaPlugin {
 
   public static boolean hasWorldGuard = false;
   public static boolean hasGriefPrevention = false;
+  public static boolean hasLands = false;
 
   @Override
   public void onEnable() {
@@ -121,13 +124,32 @@ public class CelestCombatPro extends JavaPlugin {
       getLogger().info("Found WorldGuard but safe zone barrier is disabled in config.");
     }
 
-    // GriefPrevention integration
-    if (hasGriefPrevention && getConfig().getBoolean("claim_protection.enabled", true)) {
-      griefPreventionHook = new GriefPreventionHook(this, combatManager);
-      getServer().getPluginManager().registerEvents(griefPreventionHook, this);
-      debug("GriefPrevention claim protection enabled");
-    } else if(hasGriefPrevention) {
-      getLogger().info("Found GriefPrevention but claim protection is disabled in config.");
+    // Claim system integration (claim_protection) - backed by either GriefPrevention
+    // or Lands, whichever is installed / selected via claim_protection.backend.
+    // Only one backend is ever active at a time to avoid double barriers/push-back.
+    if (getConfig().getBoolean("claim_protection.enabled", true)) {
+      String claimBackend = getConfig().getString("claim_protection.backend", "auto").toLowerCase();
+      boolean wantsGriefPrevention = "griefprevention".equals(claimBackend)
+          || ("auto".equals(claimBackend) && hasGriefPrevention);
+      boolean wantsLands = "lands".equals(claimBackend)
+          || ("auto".equals(claimBackend) && !hasGriefPrevention);
+
+      if (wantsGriefPrevention && hasGriefPrevention) {
+        griefPreventionHook = new GriefPreventionHook(this, combatManager);
+        getServer().getPluginManager().registerEvents(griefPreventionHook, this);
+        debug("Claim system integration enabled (backend: GriefPrevention)");
+      } else if (wantsLands && hasLands) {
+        landsHook = new LandsHook(this, combatManager);
+        getServer().getPluginManager().registerEvents(landsHook, this);
+        debug("Claim system integration enabled (backend: Lands)");
+      } else if ("griefprevention".equals(claimBackend) || "lands".equals(claimBackend)) {
+        getLogger().warning("claim_protection.backend is set to '" + claimBackend
+            + "' but that plugin isn't installed/enabled - claim protection is disabled.");
+      } else if (hasGriefPrevention || hasLands) {
+        getLogger().warning("Claim protection is enabled but no supported claim plugin was detected.");
+      }
+    } else if (hasGriefPrevention || hasLands) {
+      getLogger().info("Found a supported claim plugin but claim protection is disabled in config.");
     }
 
     commandManager = new CommandManager(this);
@@ -194,6 +216,10 @@ public class CelestCombatPro extends JavaPlugin {
       griefPreventionHook.cleanup();
     }
 
+    if (landsHook != null) {
+      landsHook.cleanup();
+    }
+
     if (killRewardManager != null) {
       killRewardManager.shutdown();
     }
@@ -229,6 +255,11 @@ public class CelestCombatPro extends JavaPlugin {
     if (hasGriefPrevention) {
       getLogger().info("GriefPrevention integration enabled successfully!");
     }
+
+    hasLands = isPluginEnabled("Lands") && isLandsAPIAvailable();
+    if (hasLands) {
+      getLogger().info("Lands integration enabled successfully!");
+    }
   }
 
   private boolean isPluginEnabled(String pluginName) {
@@ -248,6 +279,15 @@ public class CelestCombatPro extends JavaPlugin {
   private boolean isGriefPreventionAPIAvailable() {
     try {
       Class.forName("me.ryanhamshire.GriefPrevention.GriefPrevention");
+      return true;
+    } catch (ClassNotFoundException | NoClassDefFoundError e) {
+      return false;
+    }
+  }
+
+  private boolean isLandsAPIAvailable() {
+    try {
+      Class.forName("me.angeschossen.lands.api.LandsIntegration");
       return true;
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
       return false;
@@ -305,6 +345,10 @@ public class CelestCombatPro extends JavaPlugin {
 
     if (griefPreventionHook != null) {
       griefPreventionHook.cleanup();
+    }
+
+    if (landsHook != null) {
+      landsHook.cleanup();
     }
   }
 }

@@ -208,7 +208,7 @@ killed_trying_to_enter_safezone_combat:
   sound: entity.wither.hurt
 
 # ------------------------------------------------------
-# Claim protection messages for GriefPrevention
+# Claim protection messages (claim system: GriefPrevention or Lands)
 # ------------------------------------------------------
 combat_no_claim_entry:
   message: "&cKhông thể vào vùng đất được bảo vệ khi đang combat! &#F39C12Vui lòng chờ &#FFFFFF%time% &#F39C12giây."
