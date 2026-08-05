@@ -29,6 +29,7 @@ repositories {
     }
     maven { name = "jitpack"; url = "https://jitpack.io" }
     maven { name = "codemc"; url = "https://repo.codemc.io/repository/maven-public/" }
+    maven { name = "canvasmc"; url = "https://maven.canvasmc.io/releases" }
 }
 
 configurations.all {
@@ -38,6 +39,16 @@ configurations.all {
         force 'com.google.code.gson:gson:2.11.0'
         force 'it.unimi.dsi:fastutil:8.5.15'
     }
+}
+
+// canvas-api declares the same org.spigotmc:spigot-api capability as paper-api
+// (it's a full Paper-fork superset), so Gradle treats them as conflicting
+// alternatives if resolved in the same dependency graph. We only need canvas-api
+// for one extra event class, so it's resolved in its own configuration/graph and
+// just appended to the compile classpath - never merged with compileClasspath's
+// resolution, so there's nothing for Gradle to conflict.
+configurations {
+    canvasCompileOnly
 }
 
 dependencies {
@@ -77,6 +88,18 @@ dependencies {
     // install the PacketEvents plugin themselves (declared as a soft-depend in
     // plugin.yml); this is compile-time only.
     compileOnly 'com.github.retrooper:packetevents-spigot:2.7.0'
+
+    // Canvas-only EntityTeleportAsyncEvent hook for the PVP teleport re-arm.
+    // Compile-time only - only registered at runtime when Scheduler.isRunningOnCanvas().
+    // Resolved in its own configuration (see canvasCompileOnly below) since
+    // canvas-api conflicts with paper-api's spigot-api capability otherwise.
+    canvasCompileOnly 'io.canvasmc.canvas:canvas-api:26.2.build.895-stable'
+}
+
+sourceSets {
+    main {
+        compileClasspath += configurations.canvasCompileOnly
+    }
 }
 
 jar {

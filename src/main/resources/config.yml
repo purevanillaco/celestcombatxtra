@@ -541,13 +541,11 @@ pvp:
 
   teleport:
     # When true, teleporting while PVP is ON re-arms it (immediate effective-off,
-    # then re-activates through the same activation_warmup after landing)
+    # then re-activates through the same activation_warmup after landing).
+    # Only command/plugin-driven teleports (warps, /tp, homes, etc.) trigger this -
+    # vanilla teleports (ender pearls, chorus fruit, beds, portals, etc.) never do.
+    # This is not configurable.
     rearm_enabled: true
-
-    # Teleport causes that should NOT trigger the re-arm.
-    # See: https://jd.papermc.io/paper/26.2/org/bukkit/event/player/PlayerTeleportEvent.TeleportCause.html
-    excluded_causes:
-      - SPECTATE
 
 #---------------------------------------------------
 #              PVP TOGGLE STORAGE

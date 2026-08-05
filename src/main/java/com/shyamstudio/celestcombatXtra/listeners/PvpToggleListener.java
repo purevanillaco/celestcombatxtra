@@ -11,9 +11,6 @@ import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
-import java.util.List;
-import java.util.Locale;
-
 /**
  * Join/quit/kick cache lifecycle and teleport-triggered PVP re-arm.
  */
@@ -50,8 +47,7 @@ public class PvpToggleListener implements Listener {
         }
 
         Player player = event.getPlayer();
-        PlayerTeleportEvent.TeleportCause cause = event.getCause();
-        if (cause != null && isExcludedCause(cause)) {
+        if (!isRearmQualifyingCause(event.getCause())) {
             return;
         }
 
@@ -59,13 +55,15 @@ public class PvpToggleListener implements Listener {
         manager.triggerTeleportRearm(player);
     }
 
-    private boolean isExcludedCause(PlayerTeleportEvent.TeleportCause cause) {
-        List<String> excluded = plugin.getConfig().getStringList("pvp.teleport.excluded_causes");
-        for (String entry : excluded) {
-            if (entry != null && entry.toUpperCase(Locale.ROOT).equals(cause.name())) {
-                return true;
-            }
-        }
-        return false;
+    /**
+     * Only command/plugin-driven teleports (warps, /tp, homes, etc.) trigger the
+     * PVP re-arm - vanilla teleports (ender pearls, chorus fruit, beds, portals,
+     * spectator clicks, etc.) are deliberately ignored. Shared with
+     * {@link CanvasTeleportListener}, which mirrors this same filter for
+     * Canvas's EntityTeleportAsyncEvent.
+     */
+    static boolean isRearmQualifyingCause(PlayerTeleportEvent.TeleportCause cause) {
+        return cause == PlayerTeleportEvent.TeleportCause.COMMAND
+                || cause == PlayerTeleportEvent.TeleportCause.PLUGIN;
     }
 }

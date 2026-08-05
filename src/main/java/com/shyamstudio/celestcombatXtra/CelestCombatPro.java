@@ -138,6 +138,16 @@ public class CelestCombatPro extends JavaPlugin {
     pvpToggleManager = new PvpToggleManager(this, pvpStorage);
     pvpToggleListener = new PvpToggleListener(this);
     getServer().getPluginManager().registerEvents(pvpToggleListener, this);
+    if (Scheduler.isRunningOnCanvas()) {
+      try {
+        getServer().getPluginManager().registerEvents(
+            new com.shyamstudio.celestcombatXtra.listeners.CanvasTeleportListener(this), this);
+        getLogger().info("Canvas detected - registered EntityTeleportAsyncEvent listener for PVP re-arm.");
+      } catch (Throwable t) {
+        getLogger().warning("Canvas detected but failed to register the async teleport listener - "
+            + "falling back to PlayerTeleportEvent only for PVP re-arm. Cause: " + t);
+      }
+    }
     if (getCommand("pvp") != null) {
       getCommand("pvp").setExecutor(new PvpCommand(this));
     }
