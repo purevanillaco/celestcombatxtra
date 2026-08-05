@@ -1,8 +1,7 @@
 package com.shyamstudio.celestcombatXtra;
 
-import com.github.retrooper.packetevents.PacketEvents;
-import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager;
+import com.shyamstudio.celestcombatXtra.highlight.PacketEventsBootstrap;
 import com.shyamstudio.celestcombatXtra.listeners.GeneralItemCooldownListener;
 import com.shyamstudio.celestcombatXtra.listeners.HarmingArrowListener;
 import com.shyamstudio.celestcombatXtra.listeners.ItemLimiterListener;
@@ -27,14 +26,16 @@ public class CelestCombatXtra extends CelestCombatPro {
 
   @Override
   public void onLoad() {
-    PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
-    PacketEvents.getAPI().getSettings().checkForUpdates(false).bStats(false);
-    PacketEvents.getAPI().load();
+    // PacketEvents is only required for the PVP status highlight (glow) feature.
+    // If it fails to load, PacketEventsBootstrap.isAvailable() stays false and
+    // CelestCombatPro simply skips constructing the highlight manager - the rest
+    // of the plugin (toggle, warmups, damage gating) is unaffected.
+    PacketEventsBootstrap.tryLoad(this);
   }
 
   @Override
   public void onEnable() {
-    PacketEvents.getAPI().init();
+    PacketEventsBootstrap.tryInit(this);
 
     // Base plugin registration (existing combat logic, ender pearl, trident, etc.)
     super.onEnable();
@@ -137,8 +138,6 @@ public class CelestCombatXtra extends CelestCombatPro {
 
     super.onDisable();
 
-    if (PacketEvents.getAPI() != null) {
-      PacketEvents.getAPI().terminate();
-    }
+    PacketEventsBootstrap.tryTerminate();
   }
 }

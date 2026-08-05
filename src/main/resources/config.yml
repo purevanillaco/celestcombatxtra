@@ -531,6 +531,9 @@ pvp:
   status_highlight:
     # Shows a per-viewer glow: flashing orange while a player arms PVP, solid red
     # while PVP is fully on. Only visible to viewers whose own PVP is on/arming.
+    # Requires PacketEvents (shaded into this plugin) to load successfully on your
+    # server/version. If it fails to load, this feature is silently disabled and
+    # everything else (toggle, warmups, damage gating) keeps working normally.
     enabled: true
 
     # How often (in ticks) the flash toggles on/off during activation warmup

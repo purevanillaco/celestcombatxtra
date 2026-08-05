@@ -141,8 +141,13 @@ public class CelestCombatPro extends JavaPlugin {
     if (getCommand("pvp") != null) {
       getCommand("pvp").setExecutor(new PvpCommand(this));
     }
-    pvpHighlightManager = new PvpHighlightManager(this, pvpToggleManager);
-    pvpHighlightManager.start();
+    if (com.shyamstudio.celestcombatXtra.highlight.PacketEventsBootstrap.isAvailable()) {
+      pvpHighlightManager = new PvpHighlightManager(this, pvpToggleManager);
+      pvpHighlightManager.start();
+    } else {
+      getLogger().info("PacketEvents is not available - the PVP status highlight (glow) "
+          + "feature is disabled. PVP toggling, warmups, and damage gating are unaffected.");
+    }
 
     combatAPI = new CombatAPIImpl(this, combatManager);
     CelestCombatAPI.initialize(combatAPI);
