@@ -242,6 +242,14 @@ public class CombatAPIImpl implements CombatAPI {
         return "trident_cooldown." + suffix;
     }
 
+    @Override
+    public boolean isPvpEnabled(Player player) {
+        if (player == null || plugin.getPvpToggleManager() == null) {
+            return false;
+        }
+        return plugin.getPvpToggleManager().isEffectivelyPvpEnabled(player);
+    }
+
     private String getEnderPearlCooldownPath(String suffix) {
         String nestedPath = "enderpearl.cooldown." + suffix;
         if (plugin.getConfig().contains(nestedPath) || plugin.getConfig().isConfigurationSection(nestedPath)) {

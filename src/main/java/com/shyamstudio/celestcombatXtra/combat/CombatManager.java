@@ -490,6 +490,10 @@ public class CombatManager {
 
         combatNametagManager.refresh(player);
         combatNametagManager.refresh(attacker);
+
+        if (plugin.getPvpToggleManager() != null) {
+            plugin.getPvpToggleManager().onCombatTag(player);
+        }
     }
 
     public void punishCombatLogout(Player player) {

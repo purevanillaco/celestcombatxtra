@@ -58,4 +58,10 @@ public interface CombatAPI {
     boolean isTridentCooldownEnabledInWorld(String worldName);
     
     boolean isTridentBannedInWorld(String worldName);
+
+    /**
+     * Effective PVP-enabled state for a player (accounts for the activation/deactivation
+     * warmup state machine - see PvpToggleManager). Not-yet-loaded players are off.
+     */
+    boolean isPvpEnabled(Player player);
 }

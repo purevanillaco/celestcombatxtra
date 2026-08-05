@@ -6,7 +6,9 @@ import org.bstats.bukkit.Metrics;
 import com.shyamstudio.celestcombatXtra.combat.CombatManager;
 import com.shyamstudio.celestcombatXtra.combat.DeathAnimationManager;
 import com.shyamstudio.celestcombatXtra.commands.CommandManager;
+import com.shyamstudio.celestcombatXtra.commands.PvpCommand;
 import com.shyamstudio.celestcombatXtra.configs.TimeFormatter;
+import com.shyamstudio.celestcombatXtra.highlight.PvpHighlightManager;
 import com.shyamstudio.celestcombatXtra.hooks.protection.GriefPreventionHook;
 import com.shyamstudio.celestcombatXtra.hooks.protection.WorldGuardHook;
 import com.shyamstudio.celestcombatXtra.language.LanguageManager;
@@ -18,9 +20,13 @@ import com.shyamstudio.celestcombatXtra.listeners.ElytraCombatAbuseListener;
 import com.shyamstudio.celestcombatXtra.listeners.EnchantLimiterListener;
 import com.shyamstudio.celestcombatXtra.listeners.ExplosiveControlsListener;
 import com.shyamstudio.celestcombatXtra.listeners.ItemRestrictionListener;
+import com.shyamstudio.celestcombatXtra.listeners.PvpToggleListener;
 import com.shyamstudio.celestcombatXtra.listeners.TridentListener;
 import com.shyamstudio.celestcombatXtra.protection.NewbieProtectionManager;
+import com.shyamstudio.celestcombatXtra.pvp.PvpToggleManager;
 import com.shyamstudio.celestcombatXtra.rewards.KillRewardManager;
+import com.shyamstudio.celestcombatXtra.storage.PvpStorage;
+import com.shyamstudio.celestcombatXtra.storage.StorageFactory;
 import com.shyamstudio.celestcombatXtra.updates.ConfigUpdater;
 import com.shyamstudio.celestcombatXtra.updates.LanguageUpdater;
 import com.shyamstudio.celestcombatXtra.updates.UpdateChecker;
@@ -59,6 +65,10 @@ public class CelestCombatPro extends JavaPlugin {
   private WorldGuardHook worldGuardHook;
   private GriefPreventionHook griefPreventionHook;
   private CombatAPIImpl combatAPI;
+  private PvpStorage pvpStorage;
+  private PvpToggleManager pvpToggleManager;
+  private PvpHighlightManager pvpHighlightManager;
+  private PvpToggleListener pvpToggleListener;
 
   public static boolean hasWorldGuard = false;
   public static boolean hasGriefPrevention = false;
@@ -123,6 +133,17 @@ public class CelestCombatPro extends JavaPlugin {
     commandManager = new CommandManager(this);
     commandManager.registerCommands();
 
+    // PVP toggle feature
+    pvpStorage = StorageFactory.create(this);
+    pvpToggleManager = new PvpToggleManager(this, pvpStorage);
+    pvpToggleListener = new PvpToggleListener(this);
+    getServer().getPluginManager().registerEvents(pvpToggleListener, this);
+    if (getCommand("pvp") != null) {
+      getCommand("pvp").setExecutor(new PvpCommand(this));
+    }
+    pvpHighlightManager = new PvpHighlightManager(this, pvpToggleManager);
+    pvpHighlightManager.start();
+
     combatAPI = new CombatAPIImpl(this, combatManager);
     CelestCombatAPI.initialize(combatAPI);
 
@@ -164,6 +185,18 @@ public class CelestCombatPro extends JavaPlugin {
 
     if (newbieProtectionManager != null) {
       newbieProtectionManager.shutdown();
+    }
+
+    if (pvpHighlightManager != null) {
+      pvpHighlightManager.shutdown();
+    }
+
+    if (pvpToggleManager != null) {
+      pvpToggleManager.shutdown();
+    }
+
+    if (pvpStorage != null) {
+      pvpStorage.shutdown();
     }
 
     CelestCombatAPI.shutdown();

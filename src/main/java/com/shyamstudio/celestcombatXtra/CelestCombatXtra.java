@@ -1,5 +1,7 @@
 package com.shyamstudio.celestcombatXtra;
 
+import com.github.retrooper.packetevents.PacketEvents;
+import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import com.shyamstudio.celestcombatXtra.cooldown.ItemCooldownManager;
 import com.shyamstudio.celestcombatXtra.listeners.GeneralItemCooldownListener;
 import com.shyamstudio.celestcombatXtra.listeners.HarmingArrowListener;
@@ -24,7 +26,16 @@ public class CelestCombatXtra extends CelestCombatPro {
   private SpearControlListener spearControlListener;
 
   @Override
+  public void onLoad() {
+    PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
+    PacketEvents.getAPI().getSettings().checkForUpdates(false).bStats(false);
+    PacketEvents.getAPI().load();
+  }
+
+  @Override
   public void onEnable() {
+    PacketEvents.getAPI().init();
+
     // Base plugin registration (existing combat logic, ender pearl, trident, etc.)
     super.onEnable();
 
@@ -125,5 +136,9 @@ public class CelestCombatXtra extends CelestCombatPro {
     }
 
     super.onDisable();
+
+    if (PacketEvents.getAPI() != null) {
+      PacketEvents.getAPI().terminate();
+    }
   }
 }

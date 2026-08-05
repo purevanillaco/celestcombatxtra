@@ -492,3 +492,42 @@ config_set_success:
 config_reload_success:
   message: "&#4CAF50Config reloaded successfully after update."
   sound: entity.player.levelup
+
+# ------------------------------------------------------
+#                  PVP toggle messages
+# ------------------------------------------------------
+pvp_attacker_pvp_disabled:
+  message: "&cYou have PVP disabled. Toggle it with /pvp"
+  sound: entity.villager.no
+
+pvp_victim_pvp_disabled:
+  message: "&cThis player has PVP disabled."
+  sound: entity.villager.no
+
+pvp_activation_warmup_start:
+  message: "&6Enabling PVP in &f%seconds%s&6... Run /pvp again to cancel."
+  action_bar: "&6PVP activating in %seconds%s"
+
+pvp_activation_cancelled:
+  message: "&ePVP activation cancelled."
+
+pvp_activation_complete:
+  message: "&aPVP is now &lON&a."
+  sound: entity.experience_orb.pickup
+
+pvp_deactivation_warmup_start:
+  message: "&6Disabling PVP in &f%seconds%s&6... Run /pvp again to cancel."
+  action_bar: "&6PVP deactivating in %seconds%s"
+
+pvp_deactivation_cancelled_manual:
+  message: "&ePVP deactivation cancelled."
+
+pvp_deactivation_cancelled_combat:
+  message: "&cYou were tagged in combat - PVP deactivation cancelled!"
+  sound: entity.villager.no
+
+pvp_deactivation_complete:
+  message: "&7PVP is now &lOFF&7."
+
+pvp_teleport_rearm_notice:
+  message: "&6Teleporting re-arms your PVP - activating again in &f%seconds%s&6."

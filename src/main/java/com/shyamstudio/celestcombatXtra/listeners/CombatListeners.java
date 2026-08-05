@@ -16,6 +16,7 @@ import com.shyamstudio.celestcombatXtra.combat.CombatManager;
 import com.shyamstudio.celestcombatXtra.combat.DeathAnimationManager;
 import com.shyamstudio.celestcombatXtra.language.MessageService;
 import com.shyamstudio.celestcombatXtra.protection.NewbieProtectionManager;
+import com.shyamstudio.celestcombatXtra.pvp.PvpToggleManager;
 import com.shyamstudio.celestcombatXtra.rewards.KillRewardManager;
 
 import org.bukkit.World;
@@ -173,6 +174,10 @@ public class CombatListeners implements Listener {
             return;
         }
 
+        if (blockIfPvpDisabled(event, attacker, victim)) {
+            return;
+        }
+
         if (newbieProtectionManager.shouldProtectFromPvP()
                 && newbieProtectionManager.hasProtection(victim)) {
             boolean shouldBlock = newbieProtectionManager.handleDamageReceived(victim, attacker);
@@ -319,6 +324,34 @@ public class CombatListeners implements Listener {
         return player != null && player.isOnline() ? player : null;
     }
 
+    /**
+     * Cancels the event and messages the attacker if either side has PVP off.
+     * Attacker-off takes precedence over victim-off (more actionable message
+     * for the person taking the swing) when both are off.
+     */
+    private boolean blockIfPvpDisabled(EntityDamageEvent event, Player attacker, Player victim) {
+        PvpToggleManager pvpToggleManager = plugin.getPvpToggleManager();
+        if (pvpToggleManager == null) {
+            return false;
+        }
+
+        boolean attackerOff = !pvpToggleManager.isEffectivelyPvpEnabled(attacker);
+        boolean victimOff = !pvpToggleManager.isEffectivelyPvpEnabled(victim);
+        if (!attackerOff && !victimOff) {
+            return false;
+        }
+
+        event.setCancelled(true);
+        Map<String, String> placeholders = new HashMap<>();
+        if (attackerOff) {
+            messageService.sendMessage(attacker, "pvp_attacker_pvp_disabled", placeholders);
+        } else {
+            placeholders.put("player", victim.getName());
+            messageService.sendMessage(attacker, "pvp_victim_pvp_disabled", placeholders);
+        }
+        return true;
+    }
+
     private void cleanupStaleCrystalHits() {
         long now = System.currentTimeMillis();
         crystalHitTime.entrySet().removeIf(entry -> now - entry.getValue() > CRYSTAL_HIT_TTL_MS);
@@ -346,6 +379,10 @@ public class CombatListeners implements Listener {
             if (projectile.getShooter() instanceof Player) {
                 attacker = (Player) projectile.getShooter();
             }
+        }
+
+        if (attacker != null && blockIfPvpDisabled(event, attacker, victim)) {
+            return;
         }
 
         // Handle newbie protection checks
