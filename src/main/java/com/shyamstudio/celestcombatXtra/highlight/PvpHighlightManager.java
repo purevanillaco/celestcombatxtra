@@ -24,9 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Per-viewer PVP status highlight: solid red glow/team-color while a player's
- * PVP is fully ON, flashing orange/red (alternating glow) while it is arming
- * (ACTIVATION_WARMUP). Only visible to viewers whose own PVP is ON or arming -
- * players with PVP off see nothing, per the feature spec.
+ * PVP is fully ON, flashing orange while arming (ACTIVATION_WARMUP), flashing
+ * red while disarming (DEACTIVATION_WARMUP - still effectively PVP-on, per
+ * {@link PvpState#isEffectivelyEnabled()}, so it stays visible as a "still
+ * fightable" signal until the deactivation actually completes). Only visible to
+ * viewers who are themselves in one of these three states - players with PVP
+ * fully off see nothing, per the feature spec.
  *
  * Sent via PacketEvents fake entity-metadata (glowing bit) + per-viewer fake
  * scoreboard teams (color only, never a real shared Team), so nothing here
@@ -73,6 +76,14 @@ public class PvpHighlightManager {
         return plugin.getConfig().getBoolean("pvp.status_highlight.enabled", true);
     }
 
+    /** ON (solid red), ACTIVATION_WARMUP (flash orange) and DEACTIVATION_WARMUP
+     * (flash red) are all "still effectively PVP-on" states - both as something
+     * worth showing to others, and as a state that itself grants the right to see
+     * other players' highlights. Plain OFF is excluded from both roles. */
+    private boolean isHighlightState(PvpState state) {
+        return state == PvpState.ON || state == PvpState.ACTIVATION_WARMUP || state == PvpState.DEACTIVATION_WARMUP;
+    }
+
     private void tick() {
         if (!isEnabled()) {
             clearAllVisiblePairs();
@@ -84,19 +95,19 @@ public class PvpHighlightManager {
 
         for (Player target : Bukkit.getOnlinePlayers()) {
             PvpState targetState = pvpToggleManager.getState(target);
-            if (targetState != PvpState.ON && targetState != PvpState.ACTIVATION_WARMUP) {
+            if (!isHighlightState(targetState)) {
                 continue;
             }
 
             boolean glow = targetState == PvpState.ON || flashOn;
-            NamedTextColor color = targetState == PvpState.ON ? NamedTextColor.RED : NamedTextColor.GOLD;
+            NamedTextColor color = targetState == PvpState.ACTIVATION_WARMUP ? NamedTextColor.GOLD : NamedTextColor.RED;
 
             for (Player viewer : Bukkit.getOnlinePlayers()) {
                 if (viewer.equals(target)) {
                     continue;
                 }
                 PvpState viewerState = pvpToggleManager.getState(viewer);
-                if (viewerState != PvpState.ON && viewerState != PvpState.ACTIVATION_WARMUP) {
+                if (!isHighlightState(viewerState)) {
                     continue;
                 }
 
