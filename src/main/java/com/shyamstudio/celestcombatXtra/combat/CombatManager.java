@@ -1,14 +1,14 @@
 package com.shyamstudio.celestcombatXtra.combat;
 
 import lombok.Getter;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.bossbar.BossBar;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -131,8 +131,7 @@ public class CombatManager {
 
     private void loadBossBarConfig() {
         this.bossBarEnabled = plugin.getConfig().getBoolean("combat.bossbar.enabled", false);
-        String langTitle = plugin.getLanguageManager().getBossBarTitle("combat_bossbar", java.util.Collections.emptyMap());
-        this.bossBarTitleTemplate = langTitle != null ? langTitle : "&c\u2694 Combat: &f%time%s remaining";
+        this.bossBarTitleTemplate = "<red>\u2694 Combat: <white><time>s remaining";
         String colorStr = plugin.getConfig().getString("combat.bossbar.color", "RED");
         try {
             this.bossBarColor = BarColor.valueOf(colorStr.toUpperCase());
@@ -415,28 +414,25 @@ public class CombatManager {
         if (!bossBarEnabled || player == null || !player.isOnline()) return;
 
         BossBar bar = combatBossBars.computeIfAbsent(player.getUniqueId(), u -> {
-            BossBar b = Bukkit.createBossBar("", bossBarColor, bossBarStyle);
-            b.addPlayer(player);
+            BossBar b = BossBar.bossBar(Component.empty(), 1.0f, toAdventureColor(bossBarColor), toAdventureOverlay(bossBarStyle));
+            player.showBossBar(b);
             return b;
         });
 
-        String title = plugin.getLanguageManager().getBossBarTitle(
+        Component title = plugin.getLanguageManager().getBossBarTitle(
                 "combat_bossbar", buildCombatDisplayPlaceholders(player, remainingSeconds));
         if (title == null) {
-            title = bossBarTitleTemplate.replace("%time%", String.valueOf(remainingSeconds));
-            title = ColorUtil.translateHexColorCodes(
-                    org.bukkit.ChatColor.translateAlternateColorCodes('&', title));
+            title = ColorUtil.parse(bossBarTitleTemplate, Map.of("time", String.valueOf(remainingSeconds)));
         }
-        bar.setTitle(title);
-        bar.setProgress(Math.max(0, Math.min(1, remainingSeconds / (double) combatDurationSeconds)));
-        bar.setVisible(true);
+        bar.name(title);
+        bar.progress((float) Math.max(0, Math.min(1, remainingSeconds / (double) combatDurationSeconds)));
     }
 
     private void clearCombatBossBar(Player player) {
         if (player == null) return;
         BossBar bar = combatBossBars.remove(player.getUniqueId());
         if (bar != null) {
-            bar.removeAll();
+            player.hideBossBar(bar);
         }
     }
 
@@ -452,17 +448,16 @@ public class CombatManager {
         if (player == null || !player.isOnline()) return;
         if (plugin.isActionBarDisabled()) return;
 
-        String baseActionBar = plugin.getLanguageManager().getActionBar(baseActionBarKey, basePlaceholders);
+        Component baseActionBar = plugin.getLanguageManager().getActionBar(baseActionBarKey, basePlaceholders);
         if (baseActionBar == null) return;
 
-        StringBuilder merged = new StringBuilder(baseActionBar);
+        Component merged = baseActionBar;
 
         if (itemCooldownManager != null) {
-            itemCooldownManager.appendMergedCooldownSuffix(merged, player, appendWindCharge);
+            merged = itemCooldownManager.appendMergedCooldownSuffix(merged, player, appendWindCharge);
         }
 
-        plugin.sendActionBar(player,
-                TextComponent.fromLegacyText(ColorUtil.translateHexColorCodes(merged.toString())));
+        plugin.sendActionBar(player, merged);
     }
 
     public void tagPlayer(Player player, Player attacker) {
@@ -1066,7 +1061,32 @@ public class CombatManager {
         tridentCooldowns.clear();
 
         combatNametagManager.clearAllOnline();
-        combatBossBars.values().forEach(BossBar::removeAll);
+        combatBossBars.forEach((uuid, bar) -> {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) player.hideBossBar(bar);
+        });
         combatBossBars.clear();
+    }
+
+    private static BossBar.Color toAdventureColor(BarColor color) {
+        return switch (color) {
+            case PINK -> BossBar.Color.PINK;
+            case BLUE -> BossBar.Color.BLUE;
+            case RED -> BossBar.Color.RED;
+            case GREEN -> BossBar.Color.GREEN;
+            case YELLOW -> BossBar.Color.YELLOW;
+            case PURPLE -> BossBar.Color.PURPLE;
+            case WHITE -> BossBar.Color.WHITE;
+        };
+    }
+
+    private static BossBar.Overlay toAdventureOverlay(BarStyle style) {
+        return switch (style) {
+            case SOLID -> BossBar.Overlay.PROGRESS;
+            case SEGMENTED_6 -> BossBar.Overlay.NOTCHED_6;
+            case SEGMENTED_10 -> BossBar.Overlay.NOTCHED_10;
+            case SEGMENTED_12 -> BossBar.Overlay.NOTCHED_12;
+            case SEGMENTED_20 -> BossBar.Overlay.NOTCHED_20;
+        };
     }
 }
