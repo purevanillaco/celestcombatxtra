@@ -112,7 +112,11 @@ shadowJar {
         skipStringConstants = true
     }
     relocate('com.zaxxer.hikari', "${project.group}.libs.hikari")
-    relocate('org.sqlite', "${project.group}.libs.sqlite")
+    // org.sqlite is intentionally NOT relocated: sqlite-jdbc bundles a native
+    // (JNI) library whose exported symbols are compiled against the literal
+    // "org/sqlite/core/NativeDB" class name. Relocating the Java package breaks
+    // that native binding (UnsatisfiedLinkError on _open_utf8 et al.) since the
+    // .so/.dylib/.dll can't be repackaged the same way pure-Java classes can.
     relocate('org.mariadb.jdbc', "${project.group}.libs.mariadb")
     relocate('com.github.benmanes.caffeine', "${project.group}.libs.caffeine")
     dependencies {
