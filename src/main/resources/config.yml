@@ -504,14 +504,20 @@ claim_protection:
   # Higher values = stronger push back, lower values = gentler push
   push_back_force: 0.6
 
-  # GriefPrevention-only: player claim's permission to bypass claim barriers
-  # (player can enter claims while in combat). Not used by the Lands backend,
-  # which always checks Lands' own "can enter" permission for the claim instead.
-  # EDIT - Can edit claims settings for admins (not recommended for regular players)
-  # MANAGE - Can manage claim settings (most restrictive)
-  # BUILD - Can place/break blocks in the claim (default, good balance)
-  # CONTAINER - Can access containers inventory in the claim (least restrictive)
-  # ACCESS - Can access the claim's bed, buttons and levers (recommended for most cases)
+  # Controls who can bypass the claim barrier while in combat. Interpreted
+  # differently per backend - only the values for your active backend apply:
+  #
+  # GriefPrevention - the claim permission required to bypass:
+  #   MANAGE    - Can manage claim settings (most restrictive)
+  #   EDIT      - Can edit claim settings for admins (not recommended for regular players)
+  #   BUILD     - Can place/break blocks in the claim (default, good balance)
+  #   CONTAINER - Can access container inventory in the claim (least restrictive)
+  #   ACCESS    - Can access the claim's bed, buttons and levers (recommended for most cases)
+  #   NONE      - Nobody bypasses, not even players with full claim permissions
+  #
+  # Lands:
+  #   TRUSTED - The claim owner and trusted members bypass (default)
+  #   NONE    - Nobody bypasses, not even the claim owner
   required_permission: BUILD
 
   # Per-world configuration
