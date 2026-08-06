@@ -561,6 +561,14 @@ public class NewbieProtectionManager {
             return;
         }
 
+        // PvP toggle feature is active and defaults new players to PvP-off:
+        // newbie protection would be redundant since they can't be hit anyway.
+        if (plugin.getPvpToggleManager() != null && !plugin.getConfig().getBoolean("pvp.default_status", true)) {
+            plugin.debug("Skipping newbie protection for " + player.getName() +
+                    " - PvP toggle is active and defaults to off");
+            return;
+        }
+
         // Grant protection to new player
         grantProtection(player);
     }
