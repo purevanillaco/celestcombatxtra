@@ -83,7 +83,6 @@ public class CelestCombatPro extends JavaPlugin {
     instance = this;
 
     saveDefaultConfig();
-    checkProtectionPlugins();
 
     languageManager = new LanguageManager(this, LanguageManager.LanguageFileType.MESSAGES);
     languageUpdater = new LanguageUpdater(this, LanguageUpdater.LanguageFileType.MESSAGES);
@@ -116,52 +115,20 @@ public class CelestCombatPro extends JavaPlugin {
     getServer().getPluginManager().registerEvents(new ExplosiveControlsListener(this), this);
     getServer().getPluginManager().registerEvents(new EnchantLimiterListener(this), this);
 
-    // WorldGuard integration
-    if (hasWorldGuard && getConfig().getBoolean("safezone_protection.enabled", true)) {
-      worldGuardHook = new WorldGuardHook(this, combatManager);
-      getServer().getPluginManager().registerEvents(worldGuardHook, this);
-      debug("WorldGuard safezone protection enabled");
-    } else if(hasWorldGuard) {
-      getLogger().info("Found WorldGuard but safe zone barrier is disabled in config.");
-    }
-
-    // Claim system integration (claim_protection) - backed by either GriefPrevention
-    // or Lands, whichever is installed / selected via claim_protection.backend.
-    // Only one backend is ever active at a time to avoid double barriers/push-back.
-    if (getConfig().getBoolean("claim_protection.enabled", true)) {
-      String claimBackend = getConfig().getString("claim_protection.backend", "auto").toLowerCase();
-      boolean wantsGriefPrevention = "griefprevention".equals(claimBackend)
-          || ("auto".equals(claimBackend) && hasGriefPrevention);
-      boolean wantsLands = "lands".equals(claimBackend)
-          || ("auto".equals(claimBackend) && !hasGriefPrevention);
-
-      if (wantsGriefPrevention && hasGriefPrevention) {
-        griefPreventionHook = new GriefPreventionHook(this, combatManager);
-        getServer().getPluginManager().registerEvents(griefPreventionHook, this);
-        debug("Claim system integration enabled (backend: GriefPrevention)");
-      } else if (wantsLands && hasLands) {
-        landsHook = new LandsHook(this, combatManager);
-        getServer().getPluginManager().registerEvents(landsHook, this);
-        debug("Claim system integration enabled (backend: Lands)");
-      } else if ("griefprevention".equals(claimBackend) || "lands".equals(claimBackend)) {
-        getLogger().warning("claim_protection.backend is set to '" + claimBackend
-            + "' but that plugin isn't installed/enabled - claim protection is disabled.");
-      } else if (hasGriefPrevention || hasLands) {
-        getLogger().warning("Claim protection is enabled but no supported claim plugin was detected.");
+    // Protection-plugin detection (WorldGuard/GriefPrevention/Lands/HuskSync) and the
+    // hooks it feeds run once ALL plugins have finished enabling (see ServerLoadEvent
+    // listener below). Bukkit's soft-depend based enable-order sort is best-effort and
+    // was observed to NOT reorder Lands ahead of us on servers with large plugin sets
+    // (WorldGuard/HuskSync got reordered correctly, Lands didn't) - checking eagerly
+    // here in onEnable() intermittently sees Lands as not-yet-enabled even though it
+    // is present and will be enabled moments later. ServerLoadEvent is guaranteed to
+    // fire only after every plugin's onEnable() has returned, sidestepping that.
+    getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
+      @org.bukkit.event.EventHandler
+      public void onServerLoad(org.bukkit.event.server.ServerLoadEvent event) {
+        initializeProtectionIntegrations();
       }
-    } else if (hasGriefPrevention || hasLands) {
-      getLogger().info("Found a supported claim plugin but claim protection is disabled in config.");
-    }
-
-    // HuskSync integration - fixes an inventory-duplication exploit on combat-log kill.
-    if (hasHuskSync && getConfig().getBoolean("husksync.enabled", true)) {
-      huskSyncHook = new HuskSyncHook(this);
-      getServer().getPluginManager().registerEvents(huskSyncHook, this);
-      combatManager.setHuskSyncHook(huskSyncHook);
-      debug("HuskSync integration enabled - combat-log inventory desync fix active");
-    } else if (hasHuskSync) {
-      getLogger().info("Found HuskSync but the integration is disabled in config (husksync.enabled: false).");
-    }
+    }, this);
 
     commandManager = new CommandManager(this);
     commandManager.registerCommands();
@@ -284,6 +251,57 @@ public class CelestCombatPro extends JavaPlugin {
     hasHuskSync = isPluginEnabled("HuskSync") && isHuskSyncAPIAvailable();
     if (hasHuskSync) {
       getLogger().info("HuskSync integration enabled successfully!");
+    }
+  }
+
+  private void initializeProtectionIntegrations() {
+    checkProtectionPlugins();
+
+    // WorldGuard integration
+    if (hasWorldGuard && getConfig().getBoolean("safezone_protection.enabled", true)) {
+      worldGuardHook = new WorldGuardHook(this, combatManager);
+      getServer().getPluginManager().registerEvents(worldGuardHook, this);
+      debug("WorldGuard safezone protection enabled");
+    } else if (hasWorldGuard) {
+      getLogger().info("Found WorldGuard but safe zone barrier is disabled in config.");
+    }
+
+    // Claim system integration (claim_protection) - backed by either GriefPrevention
+    // or Lands, whichever is installed / selected via claim_protection.backend.
+    // Only one backend is ever active at a time to avoid double barriers/push-back.
+    if (getConfig().getBoolean("claim_protection.enabled", true)) {
+      String claimBackend = getConfig().getString("claim_protection.backend", "auto").toLowerCase();
+      boolean wantsGriefPrevention = "griefprevention".equals(claimBackend)
+          || ("auto".equals(claimBackend) && hasGriefPrevention);
+      boolean wantsLands = "lands".equals(claimBackend)
+          || ("auto".equals(claimBackend) && !hasGriefPrevention);
+
+      if (wantsGriefPrevention && hasGriefPrevention) {
+        griefPreventionHook = new GriefPreventionHook(this, combatManager);
+        getServer().getPluginManager().registerEvents(griefPreventionHook, this);
+        debug("Claim system integration enabled (backend: GriefPrevention)");
+      } else if (wantsLands && hasLands) {
+        landsHook = new LandsHook(this, combatManager);
+        getServer().getPluginManager().registerEvents(landsHook, this);
+        debug("Claim system integration enabled (backend: Lands)");
+      } else if ("griefprevention".equals(claimBackend) || "lands".equals(claimBackend)) {
+        getLogger().warning("claim_protection.backend is set to '" + claimBackend
+            + "' but that plugin isn't installed/enabled - claim protection is disabled.");
+      } else if (hasGriefPrevention || hasLands) {
+        getLogger().warning("Claim protection is enabled but no supported claim plugin was detected.");
+      }
+    } else if (hasGriefPrevention || hasLands) {
+      getLogger().info("Found a supported claim plugin but claim protection is disabled in config.");
+    }
+
+    // HuskSync integration - fixes an inventory-duplication exploit on combat-log kill.
+    if (hasHuskSync && getConfig().getBoolean("husksync.enabled", true)) {
+      huskSyncHook = new HuskSyncHook(this);
+      getServer().getPluginManager().registerEvents(huskSyncHook, this);
+      combatManager.setHuskSyncHook(huskSyncHook);
+      debug("HuskSync integration enabled - combat-log inventory desync fix active");
+    } else if (hasHuskSync) {
+      getLogger().info("Found HuskSync but the integration is disabled in config (husksync.enabled: false).");
     }
   }
 
